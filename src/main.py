@@ -10,21 +10,28 @@ __email__ = [
     "jonathan.heno@alumni.univ-avignon.fr",
 ]
 
-
+import time
 import yaml
-import world
+import agent
+import env
 
 
 if __name__ == "__main__":
-    with open("conf.yaml", "r") as file:
-        conf = yaml.safe_load(file)
+    #agent = agent.RandomAgent()
 
-    print(
-        world.World(
-            conf["world"]["size"],
-            x_start=conf["world"]["start"]["x"],
-            y_start=conf["world"]["start"]["y"],
-            x_end=conf["world"]["end"]["y"],
-            y_end=conf["world"]["end"]["y"],
-        )
-    )
+    env = env.GridWorld(6, 10)
+    env.reset()
+    obs, reward, done, _ = env.step(env.action_space.sample())
+    print(obs)
+    print(reward)
+    env.render()
+
+    # for _ in range(100):
+    #     env.step(env.action_space.sample()) # take a random action
+    #     time.sleep(0.5)
+    #     env.render()
+
+    # for _ in range(1000):
+    #     env.render()
+    #     env.step(env.action_space.sample()) # take a random action
+    # env.close()

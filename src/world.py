@@ -15,7 +15,7 @@ import numpy
 import enum
 
 import agent
-import coord
+from coord import Coord as Vec2
 
 
 class Cell(enum.Enum):
@@ -44,6 +44,10 @@ class World:
         x_end: int = None,
         y_end: int = None,
     ):
+
+        self.size = size
+        self.agent_pos = Vec2(x_start, y_start)
+
         if x_end is None:
             x_end = size - 1
 
@@ -117,7 +121,14 @@ class World:
                     ):
                         self.grid[coord["y"]][coord["x"]] = Cell.Trap
 
-        self.agent = agent.RandomAgent(self.reward_grid(), x_start, y_start)
+    def process_action(self, action: Vec2):
+        if self.agent_pos.x + action.x >= 0 and self.agent_pos.x + action.x < self.size:
+            if self.agent_pos.y + action.y >= 0 and self.agent_pos.y + action.y < self.size:
+                self.agent_pos.x += action.x
+                self.agent_pos.y += action.y
+                grid_kind = self.grid[self.agent_pos.y][self.agent_pos.x]
+                return self.reward[grid_kind]
+            
 
     def reward_grid(self) -> list:
         return [[self.reward[col] for col in line] for line in self.grid]
@@ -142,7 +153,7 @@ class World:
             for cidx, col in enumerate(line):
                 elt = (
                     World._AGT_REPR
-                    if self.agent.pos == coord.Coord(cidx, lidx)
+                    if self.agent_pos == Vec2(cidx, lidx)
                     else World._CELL_REPR[col]
                 )
                 grid_repr += f"{elt:^{5 if elt != ' ' else 6}}\033[1;30m|\033[0m"
