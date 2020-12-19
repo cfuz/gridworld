@@ -126,9 +126,8 @@ class World:
             if self.agent_pos.y + action.y >= 0 and self.agent_pos.y + action.y < self.size:
                 self.agent_pos.x += action.x
                 self.agent_pos.y += action.y
-                grid_kind = self.grid[self.agent_pos.y][self.agent_pos.x]
-                return self.reward[grid_kind]
-            
+        grid_kind = self.grid[self.agent_pos.y][self.agent_pos.x]
+        return self.reward[grid_kind], grid_kind == Cell.Goal
 
     def reward_grid(self) -> list:
         return [[self.reward[col] for col in line] for line in self.grid]

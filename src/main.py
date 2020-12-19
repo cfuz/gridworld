@@ -17,21 +17,23 @@ import env
 
 
 if __name__ == "__main__":
-    #agent = agent.RandomAgent()
+    max_step = 1000
+    env = env.GridWorld(6)
+    
+    agent = agent.RandomAgent(env.action_space)
+    #agent = agent.StairsAgent(env.action_space)
+    
+    state = env.reset()
+    for _ in range(max_step):
+        action = agent(state)
+        new_state, reward, done, _ = env.step(action)
 
-    env = env.GridWorld(6, 10)
-    env.reset()
-    obs, reward, done, _ = env.step(env.action_space.sample())
-    print(obs)
-    print(reward)
-    env.render()
+        # Update value function / policy
 
-    # for _ in range(100):
-    #     env.step(env.action_space.sample()) # take a random action
-    #     time.sleep(0.5)
-    #     env.render()
+        # New state is state
+        state = new_state
 
-    # for _ in range(1000):
-    #     env.render()
-    #     env.step(env.action_space.sample()) # take a random action
-    # env.close()
+        env.render()
+        if done == True: 
+            break
+        time.sleep(1.0)

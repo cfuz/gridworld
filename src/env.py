@@ -38,25 +38,26 @@ class GridWorld(gym.Env):
     def __init__(
         self,
         grid_size=6,
-        max_steps=100,
+        max_steps=1000,
         seed=1337,
     ):
+        self.size = grid_size
 
         # Action enumeration for this environment
         self.actions = GridWorld.Actions
         self.actions_idx = [self.actions.North, self.actions.East, self.actions.South, self.actions.West]
 
-        # Actions are discrete integer values
-        self.action_space = spaces.Discrete(len(self.actions))
+        self.nA = len(self.actions)
+        self.nS = self.size * self.size
 
-        self.size = grid_size
-        self.grid = World(grid_size)
+        # Actions are discrete integer values
+        self.action_space = spaces.Discrete(self.nA)
+        self.observation_space = spaces.Discrete(self.nS)
+
+        self.grid = World(self.size)
 
         # Number of cells (width and height) in the agent view
         #self.agent_view_size = 1
-
-        # Range of possible rewards
-        #self.reward_range = (0, 1)
 
         self.max_steps = max_steps
 
@@ -68,19 +69,14 @@ class GridWorld(gym.Env):
 
     def reset(self):
 
-        # Generate a new random grid at the start of each episode
-        # To keep the same grid for each episode, call env.seed() with
-        # the same seed before calling env.reset()
+        # Generate a new grid at the start of each episode
         self._gen_grid(self.size)
-
-        # These fields should be defined by _gen_grid
-        assert self.world.agent_pos is not None
 
         # Step count since episode start
         self.step_count = 0
 
         # Return first observation
-        obs = None # self.gen_obs()
+        obs = self.gen_obs()
         return obs
 
     def seed(self, seed=1337):
@@ -97,14 +93,9 @@ class GridWorld(gym.Env):
         if type(action) == int:
             action = self.actions_idx[action]
 
-        print(action)
         self.step_count += 1
 
-        reward = 0
-        done = False
-
-        # Rotate left
-        reward = self.world.process_action(action.value)
+        reward, done = self.world.process_action(action.value)
 
         if self.step_count >= self.max_steps:
             done = True
@@ -114,7 +105,7 @@ class GridWorld(gym.Env):
         return obs, reward, done, {}
     
     def gen_obs(self):
-        return 1
+        return self.world.agent_pos.y * self.size + self.world.agent_pos.x
 
     def _gen_grid(self, size):
         self.world = World(size)
