@@ -26,5 +26,6 @@ if __name__ == "__main__":
             y_start=conf["world"]["start"]["y"],
             x_end=conf["world"]["end"]["y"],
             y_end=conf["world"]["end"]["y"],
+            trap_conf=conf["traps"],
         )
     )

@@ -17,39 +17,44 @@ import numpy
 
 import coord
 
+from cell import Cell
+
 
 class Action(enum.Enum):
-    North = 0
-    East = 1
-    South = 2
-    West = 3
+    North = coord.Coord(0, -1)
+    East = coord.Coord(1, 0)
+    South = coord.Coord(0, 1)
+    West = coord.Coord(-1, 0)
 
 
 class Agent(abc.ABC):
     """ Abstract agent """
 
-    _DIRECTION = {
-        Action.North: coord.Coord(0, -1),
-        Action.East: coord.Coord(1, 0),
-        Action.South: coord.Coord(0, 1),
-        Action.West: coord.Coord(-1, 0),
-    }
-
-    def __init__(self, rgrid: list, x_start: int = 0, y_start: int = 0):
+    def __init__(self, grid: list, x_start: int = 0, y_start: int = 0):
         self.pos = coord.Coord(x_start, y_start)
 
-        self.rgrid = numpy.array(rgrid, dtype=numpy.int32)
+        size = len(grid)
+        self.rewards = {
+            Cell.Empty: -1,
+            Cell.Trap: -2 * (size - 1),
+            Cell.Start: -1,
+            Cell.Goal: 2 * (size - 1),
+        }
+
+        self.rgrid = numpy.array(
+            [[self.rewards[col] for col in line] for line in grid], dtype=numpy.int32
+        )
 
         # We pretend that the goal is represented as the max. value from the
         # reward grid.
         pos_rmax = numpy.where(self.rgrid == numpy.amax(self.rgrid))
         self.goal = coord.Coord(*pos_rmax)
 
-        self.actions = []
+        self.scan()
 
         self.reward = 0
 
-    def scan(self, grid: list):
+    def scan(self):
         self.actions = []
 
         if self.pos != self.goal:
@@ -69,6 +74,12 @@ class Agent(abc.ABC):
     def __call__(self):
         pass
 
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return "🪖"
+
 
 class RandomAgent(Agent):
     """ The world's simplest agent !"""
@@ -78,3 +89,9 @@ class RandomAgent(Agent):
 
     def __call__(self):
         return self.action_space.sample()
+
+    def __str__(self):
+        return super().__str__()
+
+    def __repr__(self):
+        return super().__repr__()

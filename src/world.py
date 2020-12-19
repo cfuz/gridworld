@@ -16,25 +16,10 @@ import enum
 
 import agent
 import coord
-
-
-class Cell(enum.Enum):
-    Empty = 0
-    Start = 1
-    Trap = 2
-    Goal = 3
+from cell import Cell
 
 
 class World:
-    _CELL_REPR = {
-        Cell.Empty: " ",
-        Cell.Trap: '🪤"',
-        Cell.Start: "🏠",
-        Cell.Goal: "🧀",
-    }
-
-    _AGT_REPR = "🐭"
-
     def __init__(
         self,
         size: int,
@@ -50,20 +35,18 @@ class World:
         if y_end is None:
             y_end = size - 1
 
-        self.reward = {
-            Cell.Empty: -1,
-            Cell.Trap: -2 * (size - 1),
-            Cell.Start: -1,
-            Cell.Goal: 2 * (size - 1),
-        }
-
         self.grid = [
             [
-                Cell.Goal if col == x_end and line == y_end else Cell.Empty
+                Cell.Goal
+                if col == x_end and line == y_end
+                else Cell.Start
+                if col == x_start and line == y_start
+                else Cell.Empty
                 for col in range(size)
             ]
             for line in range(size)
         ]
+        self.grid
 
         if trap_conf is not None:
             assert "type" in trap_conf and (
@@ -87,16 +70,18 @@ class World:
 
                 ctypes = [Cell.Empty, Cell.Trap]
                 dist = [trap_conf["dist"]["empty"], trap_conf["dist"]["trap"]]
-                rng_map = [[numpy.random.choice(ctypes, size, p=dist)] for _ in size]
+                rng_map = [
+                    numpy.random.choice(ctypes, size, p=dist) for _ in range(size)
+                ]
 
                 for lidx, line in enumerate(rng_map):
-                    for cidx, cell in enumerate(line):
+                    for cidx, col in enumerate(line):
                         if (lidx == y_start and cidx == x_start) or (
                             lidx == y_end and cidx == x_end
                         ):
                             continue
                         else:
-                            self.grid[lidx][cidx] = cell
+                            self.grid[lidx][cidx] = col
             else:
                 assert (
                     type(trap_conf["dist"]) == list
@@ -117,10 +102,7 @@ class World:
                     ):
                         self.grid[coord["y"]][coord["x"]] = Cell.Trap
 
-        self.agent = agent.RandomAgent(self.reward_grid(), x_start, y_start)
-
-    def reward_grid(self) -> list:
-        return [[self.reward[col] for col in line] for line in self.grid]
+        self.agent = agent.RandomAgent(self.grid, x_start, y_start)
 
     def __repr__(self):
         sep: str = f"\033[1;30m{'':5}+"
@@ -140,12 +122,16 @@ class World:
             grid_repr += f"\033[1;33m{lidx:^5}\033[1;30m|\033[0m"
 
             for cidx, col in enumerate(line):
-                elt = (
-                    World._AGT_REPR
-                    if self.agent.pos == coord.Coord(cidx, lidx)
-                    else World._CELL_REPR[col]
-                )
-                grid_repr += f"{elt:^{5 if elt != ' ' else 6}}\033[1;30m|\033[0m"
+                elt = str(col)
+                width = 6 if elt == "" else 5
+                if self.agent.pos == coord.Coord(cidx, lidx):
+                    if col == Cell.Trap:
+                        elt += "💀🩹"
+                        width -= 2
+                    else:
+                        elt += str(self.agent)
+                        width -= 1
+                grid_repr += f"{elt:^{width}}\033[1;30m|\033[0m"
 
             grid_repr += "\n"
 
