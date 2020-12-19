@@ -11,8 +11,11 @@ __email__ = [
 ]
 
 
+import numpy
 import enum
+
 import agent
+import coord
 
 
 class Cell(enum.Enum):
@@ -20,29 +23,22 @@ class Cell(enum.Enum):
     Start = 1
     Trap = 2
     Goal = 3
-    Bot = 4
-
-
-class Action(enum.Enum):
-    North = 0
-    East = 1
-    South = 2
-    West = 3
 
 
 class World:
     _CELL_REPR = {
         Cell.Empty: " ",
-        Cell.Bot: "🐭",
-        Cell.Trap: "🪤",
+        Cell.Trap: '🪤"',
         Cell.Start: "🏠",
         Cell.Goal: "🧀",
     }
 
+    _AGT_REPR = "🐭"
+
     def __init__(
         self,
         size: int,
-        traps: bool = False,
+        trap_conf: dict = None,
         x_start: int = 0,
         y_start: int = 0,
         x_end: int = None,
@@ -54,54 +50,102 @@ class World:
         if y_end is None:
             y_end = size - 1
 
-        if not traps:
-            self.grid = [
-                [
-                    Cell.Goal
-                    if col == x_end and line == y_end
-                    else Cell.Bot
-                    if (line == x_start and col == y_start)
-                    else Cell.Empty
-                    for col in range(size)
-                ]
-                for line in range(size)
+        self.reward = {
+            Cell.Empty: -1,
+            Cell.Trap: -2 * (size - 1),
+            Cell.Start: -1,
+            Cell.Goal: 2 * (size - 1),
+        }
+
+        self.grid = [
+            [
+                Cell.Goal if col == x_end and line == y_end else Cell.Empty
+                for col in range(size)
             ]
+            for line in range(size)
+        ]
 
-        self.agent = agent.RandomAgent(x_start, y_start)
-        self.agent.scan(self.grid)
+        if trap_conf is not None:
+            assert "type" in trap_conf and (
+                "fixed" == trap_conf["type"] or "random" == trap_conf["type"]
+            ), "Expected a trap configuration type ({fixed|random})"
+            assert (
+                "dist" in trap_conf
+            ), """
+            Expected a distribution of type dict (random mode) or a list (fixed
+            mode)
+            """
 
-    def reward(self, x: int, y: int) -> int:
-        cell = self.grid[x * self.size + y]
-        if cell == Cell.Empty:
-            return -1
-        elif cell == Cell.Trap:
-            return -2 * (self.size - 1)
-        elif cell == Cell.Goal:
-            return 2 * (self.size - 1)
-        else:
-            return 0
+            if trap_conf["type"] == "random":
+                assert (
+                    "empty" in trap_conf["dist"] and "trap" in trap_conf["dist"]
+                ), """
+                Expected a probability distribution of type: 
+                trap_conf.dist = { "empty": float in [0.0, 1.0], "trap": float in 
+                [0.0, 1.0] }
+                """
+
+                ctypes = [Cell.Empty, Cell.Trap]
+                dist = [trap_conf["dist"]["empty"], trap_conf["dist"]["trap"]]
+                rng_map = [[numpy.random.choice(ctypes, size, p=dist)] for _ in size]
+
+                for lidx, line in enumerate(rng_map):
+                    for cidx, cell in enumerate(line):
+                        if (lidx == y_start and cidx == x_start) or (
+                            lidx == y_end and cidx == x_end
+                        ):
+                            continue
+                        else:
+                            self.grid[lidx][cidx] = cell
+            else:
+                assert (
+                    type(trap_conf["dist"]) == list
+                ), """
+                Expected a distribution of type: 
+                trap_conf.dist = [ { "x": int, "y": int }, .. ]
+                """
+
+                for coord in trap_conf["dist"]:
+                    assert (
+                        "x" in coord and "y" in coord
+                    ), """
+                    Wrong coordinate format. Expected a coordinate of type: 
+                    { "x": int, "y": int }
+                    """
+                    if (coord["x"] != x_end or coord["y"] != y_end) and (
+                        coord["x"] != x_start or coord["y"] != y_start
+                    ):
+                        self.grid[coord["y"]][coord["x"]] = Cell.Trap
+
+        self.agent = agent.RandomAgent(self.reward_grid(), x_start, y_start)
+
+    def reward_grid(self) -> list:
+        return [[self.reward[col] for col in line] for line in self.grid]
 
     def __repr__(self):
-        sep: str = f"{'':6}+"
-        head: str = f"{'':6}"
+        sep: str = f"\033[1;30m{'':5}+"
+        head: str = f"\033[1;33m{'':5}"
 
         for idx in range(len(self.grid)):
             sep += f"{'':-<6}+"
             head += f" {idx:^6}"
 
-        sep += "\n"
-        head += "\n"
+        sep += "\033[0m\n"
+        head += "\033[0m\n"
 
         grid_repr: str = head
 
-        for idx, line in enumerate(self.grid):
+        for lidx, line in enumerate(self.grid):
             grid_repr += sep
-            grid_repr += f"{idx:^6}|"
+            grid_repr += f"\033[1;33m{lidx:^5}\033[1;30m|\033[0m"
 
-            for col in line:
-                grid_repr += (
-                    f"{World._CELL_REPR[col]:^{5 if col != Cell.Empty else 6}}|"
+            for cidx, col in enumerate(line):
+                elt = (
+                    World._AGT_REPR
+                    if self.agent.pos == coord.Coord(cidx, lidx)
+                    else World._CELL_REPR[col]
                 )
+                grid_repr += f"{elt:^{5 if elt != ' ' else 6}}\033[1;30m|\033[0m"
 
             grid_repr += "\n"
 
