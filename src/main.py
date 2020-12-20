@@ -22,9 +22,9 @@ if __name__ == "__main__":
 
     max_step = 1000
     env = env.GridWorld(cfg)
-    
+
     agent = agent.RandomAgent(env.action_space)
-    #agent = agent.StairsAgent(env.action_space)
+    # agent = agent.StairsAgent(env.action_space)
 
     state = env.reset()
     for _ in range(max_step):
@@ -39,6 +39,6 @@ if __name__ == "__main__":
         state = new_state
 
         env.render()
-        if done == True: 
+        if done == True:
             break
         time.sleep(1.0)

@@ -28,4 +28,4 @@ class Coord:
         return str(self)
 
     def __str__(self):
-        return f'({self.x},{self.y})'
+        return f"({self.x},{self.y})"

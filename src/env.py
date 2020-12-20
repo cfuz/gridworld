@@ -19,13 +19,14 @@ from world import World
 from coord import Coord as Vec2
 from cell import Cell
 
+
 class GridWorld(gym.Env):
     """
     2D grid world game environment
     """
 
     metadata = {
-        'render.modes': ['human'],
+        "render.modes": ["human"],
     }
 
     # Enumeration of possible actions
@@ -36,15 +37,19 @@ class GridWorld(gym.Env):
         West = Vec2(-1, 0)
 
     def __init__(
-        self,
-        cfg,
+        self, cfg,
     ):
         self.cfg = cfg
         self.size = self.cfg["world"]["size"]
 
         # Action enumeration for this environment
         self.actions = GridWorld.Actions
-        self.actions_idx = [self.actions.North, self.actions.East, self.actions.South, self.actions.West]
+        self.actions_idx = [
+            self.actions.North,
+            self.actions.East,
+            self.actions.South,
+            self.actions.West,
+        ]
 
         self.nA = len(self.actions)
         self.nS = self.size * self.size
@@ -59,13 +64,13 @@ class GridWorld(gym.Env):
             x_start=self.cfg["world"]["start"]["x"],
             y_start=self.cfg["world"]["start"]["y"],
             x_end=self.cfg["world"]["end"]["y"],
-            y_end=self.cfg["world"]["end"]["y"]
+            y_end=self.cfg["world"]["end"]["y"],
         )
 
         self.P = self.gen_P()
 
         # Number of cells (width and height) in the agent view
-        #self.agent_view_size = 1
+        # self.agent_view_size = 1
 
         self.max_steps = self.cfg["world"]["max_steps"]
 
@@ -92,7 +97,7 @@ class GridWorld(gym.Env):
         self.np_random, _ = seeding.np_random(seed)
         return [seed]
 
-    def render(self, mode='human', close=False):
+    def render(self, mode="human", close=False):
         # Render the environment to the screen
         print(self.world)
         pass
@@ -111,7 +116,7 @@ class GridWorld(gym.Env):
         obs = self.gen_obs()
 
         return obs, reward, done, {}
-    
+
     def gen_obs(self):
         return self.world.agent_pos.y * self.size + self.world.agent_pos.x
 
@@ -122,13 +127,12 @@ class GridWorld(gym.Env):
             x_start=self.cfg["world"]["start"]["x"],
             y_start=self.cfg["world"]["start"]["y"],
             x_end=self.cfg["world"]["end"]["y"],
-            y_end=self.cfg["world"]["end"]["y"]
+            y_end=self.cfg["world"]["end"]["y"],
         )
 
     def gen_P(self):
-
         def to_s(row, col):
-            return col*self.size + row
+            return col * self.size + row
 
         def next_pos(row, col, action):
             if action == self.actions.North:
@@ -160,8 +164,8 @@ class GridWorld(gym.Env):
                     cell_kind = self.world.cell_at(Vec2(row, col))
                     if cell_kind == Cell.Goal:
                         r = self.world.reward[cell_kind]
-                        li.append((1., s, r, True))
+                        li.append((1.0, s, r, True))
                     else:
-                        li.append((1., *update_p_matrix(row, col, a)))
+                        li.append((1.0, *update_p_matrix(row, col, a)))
 
         return P

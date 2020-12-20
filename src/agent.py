@@ -39,6 +39,12 @@ class RandomAgent(Agent):
     def __call__(self, state: np.array):
         return self.action_space.sample()
 
+    def __str__(self):
+        return super().__str__()
+
+    def __repr__(self):
+        return super().__repr__()
+
 
 class StairsAgent(Agent):
     """ The world's simplest agent !"""
