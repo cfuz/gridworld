@@ -37,11 +37,10 @@ class GridWorld(gym.Env):
 
     def __init__(
         self,
-        grid_size=6,
-        max_steps=1000,
-        seed=1337,
+        cfg,
     ):
-        self.size = grid_size
+        self.cfg = cfg
+        self.size = self.cfg["world"]["size"]
 
         # Action enumeration for this environment
         self.actions = GridWorld.Actions
@@ -54,15 +53,22 @@ class GridWorld(gym.Env):
         self.action_space = spaces.Discrete(self.nA)
         self.observation_space = spaces.Discrete(self.nS)
 
-        self.grid = World(self.size)
+        self.world = World(
+            self.cfg["world"]["size"],
+            trap_conf=self.cfg["traps"],
+            x_start=self.cfg["world"]["start"]["x"],
+            y_start=self.cfg["world"]["start"]["y"],
+            x_end=self.cfg["world"]["end"]["y"],
+            y_end=self.cfg["world"]["end"]["y"]
+        )
 
         # Number of cells (width and height) in the agent view
         #self.agent_view_size = 1
 
-        self.max_steps = max_steps
+        self.max_steps = self.cfg["world"]["max_steps"]
 
         # Initialize the RNG
-        self.seed(seed=seed)
+        self.seed(seed=self.cfg["world"]["seed"])
 
         # Initialize the state
         self.reset()
@@ -70,7 +76,7 @@ class GridWorld(gym.Env):
     def reset(self):
 
         # Generate a new grid at the start of each episode
-        self._gen_grid(self.size)
+        self._gen_grid()
 
         # Step count since episode start
         self.step_count = 0
@@ -107,8 +113,15 @@ class GridWorld(gym.Env):
     def gen_obs(self):
         return self.world.agent_pos.y * self.size + self.world.agent_pos.x
 
-    def _gen_grid(self, size):
-        self.world = World(size)
+    def _gen_grid(self):
+        self.world = World(
+            self.cfg["world"]["size"],
+            trap_conf=self.cfg["traps"],
+            x_start=self.cfg["world"]["start"]["x"],
+            y_start=self.cfg["world"]["start"]["y"],
+            x_end=self.cfg["world"]["end"]["y"],
+            y_end=self.cfg["world"]["end"]["y"]
+        )
 
     def _rand_pos(self, xLow, xHigh, yLow, yHigh):
         """

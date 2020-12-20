@@ -1,8 +1,15 @@
 world:
   size: 12
+  max_steps: 1000
+  seed: 1337
   start:
     x: 0
     y: 0
   end:
     x: 11
     y: 11
+traps:
+  type: 'random'
+  dist:
+    empty: 0.1
+    trap: 0.9

@@ -17,8 +17,11 @@ import env
 
 
 if __name__ == "__main__":
+    with open("conf.yaml", "r") as file:
+        cfg = yaml.safe_load(file)
+
     max_step = 1000
-    env = env.GridWorld(6)
+    env = env.GridWorld(cfg)
     
     agent = agent.RandomAgent(env.action_space)
     #agent = agent.StairsAgent(env.action_space)
