@@ -25,13 +25,15 @@ if __name__ == "__main__":
     
     agent = agent.RandomAgent(env.action_space)
     #agent = agent.StairsAgent(env.action_space)
-    
+
     state = env.reset()
     for _ in range(max_step):
         action = agent(state)
+        print(env.actions_idx[action])
         new_state, reward, done, _ = env.step(action)
 
         # Update value function / policy
+        print(env.P[state][action])
 
         # New state is state
         state = new_state

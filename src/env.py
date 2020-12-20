@@ -17,7 +17,7 @@ from enum import Enum
 import numpy as np
 from world import World
 from coord import Coord as Vec2
-
+from cell import Cell
 
 class GridWorld(gym.Env):
     """
@@ -61,6 +61,8 @@ class GridWorld(gym.Env):
             x_end=self.cfg["world"]["end"]["y"],
             y_end=self.cfg["world"]["end"]["y"]
         )
+
+        self.P = self.gen_P()
 
         # Number of cells (width and height) in the agent view
         #self.agent_view_size = 1
@@ -123,12 +125,43 @@ class GridWorld(gym.Env):
             y_end=self.cfg["world"]["end"]["y"]
         )
 
-    def _rand_pos(self, xLow, xHigh, yLow, yHigh):
-        """
-        Generate a random (x,y) position tuple
-        """
+    def gen_P(self):
 
-        return (
-            self.np_random.randint(xLow, xHigh),
-            self.np_random.randint(yLow, yHigh)
-        )
+        def to_s(row, col):
+            return col*self.size + row
+
+        def next_pos(row, col, action):
+            if action == self.actions.North:
+                col = max(col - 1, 0)
+            elif action == self.actions.South:
+                col = min(col + 1, self.size - 1)
+            elif action == self.actions.East:
+                row = min(row + 1, self.size - 1)
+            elif action == self.actions.West:
+                row = max(row - 1, 0)
+            return (row, col)
+
+        def update_p_matrix(row, col, action):
+            action = self.actions_idx[action]
+            new_row, new_col = next_pos(row, col, action)
+            new_state = to_s(new_row, new_col)
+            new_cell_kind = self.world.cell_at(Vec2(new_row, new_col))
+            done = new_cell_kind == Cell.Goal
+            reward = self.world.reward[new_cell_kind]
+            return new_state, reward, done
+
+        P = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
+
+        for row in range(self.size):
+            for col in range(self.size):
+                s = to_s(row, col)
+                for a in range(4):
+                    li = P[s][a]
+                    cell_kind = self.world.cell_at(Vec2(row, col))
+                    if cell_kind == Cell.Goal:
+                        r = self.world.reward[cell_kind]
+                        li.append((1., s, r, True))
+                    else:
+                        li.append((1., *update_p_matrix(row, col, a)))
+
+        return P

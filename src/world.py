@@ -132,6 +132,9 @@ class World:
                     ):  
                         self.grid[coord["y"]][coord["x"]] = Cell.Trap
 
+    def cell_at(self, pos):
+        return self.grid[pos.y][pos.x]
+
     def __repr__(self):
         sep: str = f"\033[1;30m{'':5}+"
         head: str = f"\033[1;33m{'':5}"
