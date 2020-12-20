@@ -15,7 +15,8 @@ import numpy
 import enum
 
 import agent
-import coord
+
+from coord import Coord
 from cell import Cell
 
 
@@ -29,11 +30,22 @@ class World:
         x_end: int = None,
         y_end: int = None,
     ):
+        self.size = size
+        self.n_cells = size ** 2
+        self.agent_pos = Coord(x_start, y_start)
+
         if x_end is None:
             x_end = size - 1
 
         if y_end is None:
             y_end = size - 1
+
+        self.reward = {
+            Cell.Empty: -1,
+            Cell.Trap: -2 * (size - 1),
+            Cell.Start: -1,
+            Cell.Goal: 2 * (size - 1),
+        }
 
         self.grid = [
             [
@@ -48,6 +60,31 @@ class World:
         ]
         self.grid
 
+        self.gen_trap(
+            trap_conf, x_start, y_start, x_end, y_end,
+        )
+
+
+    def process_action(self, action: Coord):
+        tmp = self.agent_pos + action
+        
+        if tmp.x >= 0 and tmp.x < self.size:
+            if tmp.y >= 0 and tmp.y < self.size:
+                self.agent_pos = tmp
+        
+        ctype = self.grid[self.agent_pos.y][self.agent_pos.x]
+        
+        return self.reward[ctype], ctype == Cell.Goal
+
+
+    def gen_trap(
+        self,
+        trap_conf: dict = None,
+        x_start: int = 0,
+        y_start: int = 0,
+        x_end: int = None,
+        y_end: int = None,
+    ):
         if trap_conf is not None:
             assert "type" in trap_conf and (
                 "fixed" == trap_conf["type"] or "random" == trap_conf["type"]
@@ -71,7 +108,8 @@ class World:
                 ctypes = [Cell.Empty, Cell.Trap]
                 dist = [trap_conf["dist"]["empty"], trap_conf["dist"]["trap"]]
                 rng_map = [
-                    numpy.random.choice(ctypes, size, p=dist) for _ in range(size)
+                    numpy.random.choice(ctypes, self.size, p=dist)
+                    for _ in range(self.size)
                 ]
 
                 for lidx, line in enumerate(rng_map):
@@ -102,9 +140,12 @@ class World:
                     ):
                         self.grid[coord["y"]][coord["x"]] = Cell.Trap
 
-        self.agent = agent.RandomAgent(self.grid, x_start, y_start)
 
-    def __repr__(self):
+    def cell_at(self, pos: Coord) -> Cell:
+        return self.grid[pos.y][pos.x]
+
+
+    def __repr__(self) -> str:
         sep: str = f"\033[1;30m{'':5}+"
         head: str = f"\033[1;33m{'':5}"
 
@@ -124,13 +165,15 @@ class World:
             for cidx, col in enumerate(line):
                 elt = str(col)
                 width = 6 if elt == "" else 5
-                if self.agent.pos == coord.Coord(cidx, lidx):
+                
+                if self.agent_pos == Coord(cidx, lidx):
                     if col == Cell.Trap:
                         elt += "💀🩹"
                         width -= 2
                     else:
-                        elt += str(self.agent)
+                        elt += "🪖"
                         width -= 1
+
                 grid_repr += f"{elt:^{width}}\033[1;30m|\033[0m"
 
             grid_repr += "\n"

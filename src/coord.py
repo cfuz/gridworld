@@ -23,3 +23,9 @@ class Coord:
         if isinstance(other, Coord):
             return self.x == other.x and self.y == other.y
         return False
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return f"({self.x}, {self.y})"

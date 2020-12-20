@@ -11,21 +11,36 @@ __email__ = [
 ]
 
 
+import time
 import yaml
-import world
+import agent
+import env
 
 
 if __name__ == "__main__":
-    with open("conf.yaml", "r") as file:
-        conf = yaml.safe_load(file)
+    with open("conf.yml", "r") as file:
+        cfg = yaml.safe_load(file)
 
-    print(
-        world.World(
-            conf["world"]["size"],
-            x_start=conf["world"]["start"]["x"],
-            y_start=conf["world"]["start"]["y"],
-            x_end=conf["world"]["end"]["y"],
-            y_end=conf["world"]["end"]["y"],
-            trap_conf=conf["traps"],
-        )
-    )
+    env = env.GridWorld(cfg)
+
+    agent = agent.RandomAgent(env.action_space)
+    # agent = agent.StairsAgent(env.action_space)
+
+    state = env.reset()
+    
+    for _ in range(cfg['max_steps']):
+        action = agent(state)
+        print(env.actions_idx[action])
+        new_state, reward, done, _ = env.step(action)
+
+        # Update value function / policy
+        print(env.dist[state][action])
+
+        # New state is state
+        state = new_state
+
+        env.render()
+        if done == True:
+            break
+
+        time.sleep(1.0)
