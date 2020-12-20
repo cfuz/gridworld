@@ -11,21 +11,17 @@ __email__ = [
 ]
 
 
-import abc
-import enum
 import numpy
 
-import coord
-
-from cell import Cell
+from agent import Agent
 
 
-class Agent(abc.ABC):
-    """ Abstract agent """
+class RandomAgent(Agent):
+    """ The world's simplest agent !"""
 
-    def __init__(self, action_space: numpy.array):
-        self.action_space = action_space
+    def __init__(self, action_space: numpy.array, cfg: dict = None):
+        super().__init__(action_space)
+        self.cfg = cfg
 
-    @abc.abstractmethod
     def __call__(self, state: numpy.array):
-        pass
+        return self.action_space.sample()

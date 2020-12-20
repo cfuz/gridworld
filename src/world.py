@@ -30,6 +30,13 @@ class World:
         x_end: int = None,
         y_end: int = None,
     ):
+        assert (
+            x_start >= 0 and x_start < size and y_start >= 0 and y_start < size
+        ), "Starting point out of grid.."
+        assert (
+            x_end >= 0 and x_end < size and y_start >= 0 and y_start < size
+        ), "Ending point out of grid.."
+
         self.size = size
         self.n_cells = size ** 2
         self.agent_pos = Coord(x_start, y_start)
@@ -60,90 +67,76 @@ class World:
         ]
         self.grid
 
-        self.gen_trap(
-            trap_conf, x_start, y_start, x_end, y_end,
-        )
-
+        if trap_conf is not None:
+            self.gen_traps(x_start, y_start, x_end, y_end, trap_conf)
 
     def process_action(self, action: Coord):
         tmp = self.agent_pos + action
-        
+
         if tmp.x >= 0 and tmp.x < self.size:
             if tmp.y >= 0 and tmp.y < self.size:
                 self.agent_pos = tmp
-        
+
         ctype = self.grid[self.agent_pos.y][self.agent_pos.x]
-        
+
         return self.reward[ctype], ctype == Cell.Goal
 
-
-    def gen_trap(
-        self,
-        trap_conf: dict = None,
-        x_start: int = 0,
-        y_start: int = 0,
-        x_end: int = None,
-        y_end: int = None,
+    def gen_traps(
+        self, x_start: int, y_start: int, x_end: int, y_end: int, trap_conf: dict
     ):
-        if trap_conf is not None:
-            assert "type" in trap_conf and (
-                "fixed" == trap_conf["type"] or "random" == trap_conf["type"]
-            ), "Expected a trap configuration type ({fixed|random})"
+        assert "type" in trap_conf and (
+            "fixed" == trap_conf["type"] or "random" == trap_conf["type"]
+        ), "Expected a trap configuration type ({fixed|random})"
+        assert (
+            "dist" in trap_conf
+        ), """
+        Expected a distribution of type dict (random mode) or a list (fixed
+        mode)
+        """
+
+        start, end = Coord(x_start, y_start), Coord(x_end, y_end)
+
+        if trap_conf["type"] == "random":
             assert (
-                "dist" in trap_conf
+                "empty" in trap_conf["dist"] and "trap" in trap_conf["dist"]
             ), """
-            Expected a distribution of type dict (random mode) or a list (fixed
-            mode)
+            Expected a probability distribution of type: 
+            trap_conf.dist = { "empty": float in [0.0, 1.0], "trap": float in 
+            [0.0, 1.0] }
             """
 
-            if trap_conf["type"] == "random":
+            ctypes = [Cell.Empty, Cell.Trap]
+            dist = [trap_conf["dist"]["empty"], trap_conf["dist"]["trap"]]
+            rng_map = [
+                numpy.random.choice(ctypes, self.size, p=dist) for _ in range(self.size)
+            ]
+
+            for lidx, line in enumerate(rng_map):
+                for cidx, col in enumerate(line):
+                    pos = Coord(cidx, lidx)
+                    if pos != start and pos != end:
+                        self.grid[lidx][cidx] = col
+        else:
+            assert (
+                type(trap_conf["dist"]) == list
+            ), """
+            Expected a distribution of type: 
+            trap_conf.dist = [ { "x": int, "y": int }, .. ]
+            """
+
+            for coord in trap_conf["dist"]:
                 assert (
-                    "empty" in trap_conf["dist"] and "trap" in trap_conf["dist"]
+                    "x" in coord and "y" in coord
                 ), """
-                Expected a probability distribution of type: 
-                trap_conf.dist = { "empty": float in [0.0, 1.0], "trap": float in 
-                [0.0, 1.0] }
+                Wrong coordinate format. Expected a coordinate of type: 
+                { "x": int, "y": int }
                 """
-
-                ctypes = [Cell.Empty, Cell.Trap]
-                dist = [trap_conf["dist"]["empty"], trap_conf["dist"]["trap"]]
-                rng_map = [
-                    numpy.random.choice(ctypes, self.size, p=dist)
-                    for _ in range(self.size)
-                ]
-
-                for lidx, line in enumerate(rng_map):
-                    for cidx, col in enumerate(line):
-                        if (lidx == y_start and cidx == x_start) or (
-                            lidx == y_end and cidx == x_end
-                        ):
-                            continue
-                        else:
-                            self.grid[lidx][cidx] = col
-            else:
-                assert (
-                    type(trap_conf["dist"]) == list
-                ), """
-                Expected a distribution of type: 
-                trap_conf.dist = [ { "x": int, "y": int }, .. ]
-                """
-
-                for coord in trap_conf["dist"]:
-                    assert (
-                        "x" in coord and "y" in coord
-                    ), """
-                    Wrong coordinate format. Expected a coordinate of type: 
-                    { "x": int, "y": int }
-                    """
-                    if (coord["x"] != x_end or coord["y"] != y_end) and (
-                        coord["x"] != x_start or coord["y"] != y_start
-                    ):
-                        self.grid[coord["y"]][coord["x"]] = Cell.Trap
-
+                pos = Coord(coord["x"], coord["y"])
+                if pos != start and pos != end:
+                    self.grid[coord["y"]][coord["x"]] = Cell.Trap
 
     def cell_at(self, pos: Coord) -> Cell:
         return self.grid[pos.y][pos.x]
-
 
     def __repr__(self) -> str:
         sep: str = f"\033[1;30m{'':5}+"
@@ -165,7 +158,7 @@ class World:
             for cidx, col in enumerate(line):
                 elt = str(col)
                 width = 6 if elt == "" else 5
-                
+
                 if self.agent_pos == Coord(cidx, lidx):
                     if col == Cell.Trap:
                         elt += "💀🩹"

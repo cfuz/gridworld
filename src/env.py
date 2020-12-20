@@ -27,11 +27,9 @@ from action import Action
 class GridWorld(gym.Env):
     """2D grid world game environment"""
 
-
     metadata = {
         "render.modes": ["human"],
     }
-
 
     def __init__(self, cfg):
         self.cfg = cfg
@@ -41,7 +39,7 @@ class GridWorld(gym.Env):
 
         # Action enumeration for this environment
         self.actions = Action
-        self.actions_idx = [
+        self.idx_to_action = [
             self.actions.North,
             self.actions.East,
             self.actions.South,
@@ -64,7 +62,6 @@ class GridWorld(gym.Env):
         # Initialize the RNG
         self.seed(seed=self.cfg["seed"])
 
-
     def reset(self):
         # Generate a new grid at the start of each episode
         self._gen_world()
@@ -74,24 +71,21 @@ class GridWorld(gym.Env):
 
         # Return first observation
         obs = self.gen_obs()
-        
-        return obs
 
+        return obs
 
     def seed(self, seed=1337):
         # Seed the random number generator
         self.np_random, _ = seeding.np_random(seed)
         return [seed]
 
-
     def render(self, mode="human", close=False):
         # Render the environment to the screen
         print(self.world)
 
-
     def step(self, action):
         if type(action) == int:
-            action = self.actions_idx[action]
+            action = self.idx_to_action[action]
 
         self.n_steps += 1
 
@@ -104,21 +98,18 @@ class GridWorld(gym.Env):
 
         return obs, reward, done, {}
 
-
     def gen_obs(self):
         return self.world.agent_pos.y * self.world.size + self.world.agent_pos.x
-
 
     def _gen_world(self):
         self.world = World(
             self.cfg["world"]["size"],
-            trap_conf=self.cfg["traps"],
+            trap_conf=self.cfg["world"]["traps"],
             x_start=self.cfg["world"]["start"]["x"],
             y_start=self.cfg["world"]["start"]["y"],
             x_end=self.cfg["world"]["end"]["y"],
             y_end=self.cfg["world"]["end"]["y"],
         )
-
 
     def gen_dist(self):
         def to_state(row, col):
@@ -137,7 +128,7 @@ class GridWorld(gym.Env):
             return (row, col)
 
         def update_dist_matrix(row, col, action):
-            action = self.actions_idx[action]
+            action = self.idx_to_action[action]
             new_row, new_col = next_pos(row, col, action)
             new_state = to_state(new_row, new_col)
             new_cell_kind = self.world.cell_at(Coord(new_row, new_col))
@@ -145,7 +136,9 @@ class GridWorld(gym.Env):
             reward = self.world.reward[new_cell_kind]
             return new_state, reward, done
 
-        dist = {s: {a: [] for a in range(self.n_actions)} for s in range(self.world.n_cells)}
+        dist = {
+            s: {a: [] for a in range(self.n_actions)} for s in range(self.world.n_cells)
+        }
 
         for row in range(self.world.size):
             for col in range(self.world.size):

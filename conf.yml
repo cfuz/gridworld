@@ -7,11 +7,13 @@ world:
     x: 0
     y: 0
   end:
-    x: 12
-    y: 12
+    x: 11
+    y: 11
+  traps:
+    type: 'random'
+    dist:
+      empty: 0.7
+      trap: 0.3
 
-traps:
+agent:
   type: 'random'
-  dist:
-    empty: 0.7
-    trap: 0.3
