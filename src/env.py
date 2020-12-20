@@ -51,12 +51,12 @@ class GridWorld(gym.Env):
             self.actions.West,
         ]
 
-        self.nA = len(self.actions)
-        self.nS = self.size * self.size
+        self.n_actions = len(self.actions)
+        self.n_cells = self.size * self.size
 
         # Actions are discrete integer values
-        self.action_space = spaces.Discrete(self.nA)
-        self.observation_space = spaces.Discrete(self.nS)
+        self.action_space = spaces.Discrete(self.n_actions)
+        self.observation_space = spaces.Discrete(self.n_cells)
 
         self.world = World(
             self.cfg["world"]["size"],
@@ -67,7 +67,7 @@ class GridWorld(gym.Env):
             y_end=self.cfg["world"]["end"]["y"],
         )
 
-        self.P = self.gen_P()
+        self.dist = self.gen_dist()
 
         # Number of cells (width and height) in the agent view
         # self.agent_view_size = 1
@@ -130,8 +130,8 @@ class GridWorld(gym.Env):
             y_end=self.cfg["world"]["end"]["y"],
         )
 
-    def gen_P(self):
-        def to_s(row, col):
+    def gen_dist(self):
+        def to_state(row, col):
             return col * self.size + row
 
         def next_pos(row, col, action):
@@ -145,27 +145,29 @@ class GridWorld(gym.Env):
                 row = max(row - 1, 0)
             return (row, col)
 
-        def update_p_matrix(row, col, action):
+        def update_dist_matrix(row, col, action):
             action = self.actions_idx[action]
             new_row, new_col = next_pos(row, col, action)
-            new_state = to_s(new_row, new_col)
+            new_state = to_state(new_row, new_col)
             new_cell_kind = self.world.cell_at(Vec2(new_row, new_col))
             done = new_cell_kind == Cell.Goal
             reward = self.world.reward[new_cell_kind]
             return new_state, reward, done
 
-        P = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
+        dist = {s: {a: [] for a in range(self.n_actions)} for s in range(self.n_cells)}
 
         for row in range(self.size):
             for col in range(self.size):
-                s = to_s(row, col)
+                s = to_state(row, col)
+
                 for a in range(4):
-                    li = P[s][a]
-                    cell_kind = self.world.cell_at(Vec2(row, col))
-                    if cell_kind == Cell.Goal:
-                        r = self.world.reward[cell_kind]
+                    li = dist[s][a]
+                    ctype = self.world.cell_at(Vec2(row, col))
+
+                    if ctype == Cell.Goal:
+                        r = self.world.reward[ctype]
                         li.append((1.0, s, r, True))
                     else:
-                        li.append((1.0, *update_p_matrix(row, col, a)))
+                        li.append((1.0, *update_dist_matrix(row, col, a)))
 
-        return P
+        return dist

@@ -33,7 +33,7 @@ if __name__ == "__main__":
         new_state, reward, done, _ = env.step(action)
 
         # Update value function / policy
-        print(env.P[state][action])
+        print(env.dist[state][action])
 
         # New state is state
         state = new_state
