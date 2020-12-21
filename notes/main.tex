@@ -1,0 +1,66 @@
+% !TEX program = lualatex
+\documentclass{cfg}
+
+\title{\textsc{Gridworld}}
+\author{Jarod DURET\\ Jonathan HENO}
+\date{\today}
+
+\begin{document}
+\section{Configuration triviale}
+\subsection{Processus de décision markovien}
+\begin{algorithmic} 
+    \REQUIRE $S(\left\{i|i=0..N^2\right\}), \pi(S), \gamma, \epsilon$
+    \ENSURE $\mathbf{\pi^\star}(\mathbf{s}), \mathbf{v_{\pi}^{\star}}(S)$
+    \STATE\COMMENT Initialisation
+    \STATE $\mathbf{v^{\star}_{\pi, 0}}(S) \gets \mathbf{0}$
+
+    \FOR{$t=1$ \TO $t_{obs}$}
+        \FOR{$s$ dans $\mathbf{s}$}
+            \STATE $
+                \mathbf{v_{\pi, t}}(S) 
+                \gets 
+                \left(
+                    \sum\limits_{s^\prime \in S} 
+                    p(s, a, s^\prime)\left( 
+                        r(s, a, s^\prime) 
+                        + \gamma v_{\pi, t-1}^{\star}(s^\prime) 
+                    \right)
+                \right)_{a\in\pi(S)}
+            $
+            \STATE $
+                \mathbf{v_{\pi, t}^{\star}}(S) 
+                \gets 
+                \max\limits_{a \in \pi(S)}
+                \mathbf{v_{\pi, t}}(S)
+            $
+            \STATE $
+                \mathbf{\pi^\star}(S) 
+                \gets 
+                \left(
+                    \max\limits_{a \in \pi(s)}
+                    \mathbf{v_{\pi, t}}(s)
+                \right)_{s\in S}
+            $
+
+            \IF{$\max\limits_{s \in S}
+                \left(
+                    v^{\star}_{\pi, t}(s) - v^{\star}_{\pi, t-1}(s)
+                \right) \leq \epsilon
+            $}
+                \RETURN $\mathbf{\pi^\star}(S), \mathbf{v_{\pi, t}^{\star}}(S)$
+            \ENDIF
+        \ENDFOR
+    \ENDFOR
+    
+    \RETURN $\mathbf{\pi^\star}(S), \mathbf{v_{\pi, t}^{\star}}(S)$
+\end{algorithmic}
+
+\subsection{SARSA}
+
+
+\subsection{Q-learning}
+
+
+\section{Intégration de pièges}
+
+\end{document}
