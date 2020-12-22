@@ -18,6 +18,7 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 from enum import Enum
 
+from agent import Agent
 from world import World
 from coord import Coord
 from cell import Cell
@@ -25,133 +26,125 @@ from action import Action
 
 
 class GridWorld(gym.Env):
-    """2D grid world game environment"""
-
-    metadata = {
-        "render.modes": ["human"],
-    }
-
     def __init__(self, cfg):
         self.cfg = cfg
 
-        # Instanciating world & setting step number to 0
-        self.reset()
-
         # Action enumeration for this environment
         self.actions = Action
-        self.idx_to_action = [
-            self.actions.North,
-            self.actions.East,
-            self.actions.South,
-            self.actions.West,
-        ]
+        self.n_actions = len(Action)
 
-        self.n_actions = len(self.actions)
+        # Generate a new grid at the start of each episode
+        self._gen_world()
 
-        # Actions are discrete integer values
-        self.action_space = spaces.Discrete(self.n_actions)
-        self.observation_space = spaces.Discrete(self.world.n_cells)
+        self._gen_dist()
 
-        self.dist = self.gen_dist()
-
-        # Number of cells (width and height) in the agent view
-        # self.agent_view_size = 1
-
+        # Step count since episode start
+        self.n_steps = 0
         self.step_max = self.cfg["max_steps"]
 
         # Initialize the RNG
         self.seed(seed=self.cfg["seed"])
 
-    def reset(self):
-        # Generate a new grid at the start of each episode
-        self._gen_world()
+    def inject(self, agent: Agent):
+        self.world._inject(agent)
 
-        # Step count since episode start
-        self.n_steps = 0
-
-        # Return first observation
-        obs = self.gen_obs()
-
-        return obs
-
-    def seed(self, seed=1337):
+    def seed(self, seed=7878):
         # Seed the random number generator
         self.np_random, _ = seeding.np_random(seed)
         return [seed]
 
-    def render(self, mode="human", close=False):
+    def render(self, close=False):
         # Render the environment to the screen
         print(self.world)
 
-    def step(self, action):
-        if type(action) == int:
-            action = self.idx_to_action[action]
+    def step(self, action: int or Action) -> (int, float, bool):
+        if isinstance(action, int) or isinstance(action, numpy.int32):
+            action = self.actions.from_idx(action)
 
         self.n_steps += 1
 
-        reward, done = self.world.process_action(action.value)
+        reward, done = self.world.process_action(action)
 
         if self.n_steps >= self.step_max:
             done = True
 
         obs = self.gen_obs()
 
-        return obs, reward, done, {}
+        return obs, reward, done
 
     def gen_obs(self):
-        return self.world.agent_pos.y * self.world.size + self.world.agent_pos.x
+        return self.world.agent.pos.to_state()
 
     def _gen_world(self):
         self.world = World(
             self.cfg["world"]["size"],
-            trap_conf=self.cfg["world"]["traps"],
-            x_start=self.cfg["world"]["start"]["x"],
-            y_start=self.cfg["world"]["start"]["y"],
-            x_end=self.cfg["world"]["end"]["y"],
-            y_end=self.cfg["world"]["end"]["y"],
+            trap_conf=self.cfg["world"]["traps"] if "traps" in self.cfg["world"] else None,
+            x_start=self.cfg["world"]["start"]["x"] if "x" in self.cfg["world"]["start"] else None,
+            y_start=self.cfg["world"]["start"]["y"] if "y" in self.cfg["world"]["start"] else None,
+            x_end=self.cfg["world"]["end"]["y"] if "x" in self.cfg["world"]["end"] else None,
+            y_end=self.cfg["world"]["end"]["y"] if "y" in self.cfg["world"]["end"] else None,
         )
 
-    def gen_dist(self):
-        def to_state(row, col):
-            return col * self.world.size + row
+    def _gen_dist(self):
+        def next(state: int, action: Action) -> (int, float, bool):
+            if self.world.cell(state) == Cell.Goal:
+                return (state, 0.0, True)
+            else:
+                nstate = (
+                    Coord(state % self.world.size, state // self.world.size) + action.value
+                )
+                if action == Action.North:
+                    nstate.y = max(nstate.y, 0)
+                elif action == Action.South:
+                    nstate.y = min(nstate.y, self.world.size - 1)
+                elif action == Action.East:
+                    nstate.x = min(nstate.x, self.world.size - 1)
+                elif action == Action.West:
+                    nstate.x = max(nstate.x, 0)
+                nstate = nstate.to_state()
+                return (
+                    nstate,
+                    self.world.flat_reward_map[nstate],
+                    self.world.cell(nstate) == Cell.Goal,
+                )
 
-        def next_pos(row, col, action):
-            if action == self.actions.North:
-                col = max(col - 1, 0)
-            elif action == self.actions.South:
-                col = min(col + 1, self.world.size - 1)
-            elif action == self.actions.East:
-                row = min(row + 1, self.world.size - 1)
-            elif action == self.actions.West:
-                row = max(row - 1, 0)
+        def to_coord(pos: int) -> Coord:
+            return Coord(pos % self.world.size, pos // self.world.size)
 
-            return (row, col)
+        def transitions_from_state(
+            state: int,
+        ) -> (numpy.array, numpy.array, numpy.array):
+            # st = {}
+            reward_transitions = []
+            state_transitions = []
+            goal_transitions = []
+            for a in self.actions.to_indices():
+                nstate, nrew, done = next(state, Action.from_idx(a))
+                reward_transitions += [nrew]
+                state_transitions += [nstate]
+                goal_transitions += [done]
+                # st[a] = {'state': nstate, 'reward': nrew, 'goal': ngoal)]
+            # return st
+            return (
+                numpy.array(reward_transitions, dtype=numpy.float32),
+                numpy.array(state_transitions, dtype=numpy.int32),
+                numpy.array(goal_transitions, dtype=bool),
+            )
 
-        def update_dist_matrix(row, col, action):
-            action = self.idx_to_action[action]
-            new_row, new_col = next_pos(row, col, action)
-            new_state = to_state(new_row, new_col)
-            new_cell_kind = self.world.cell_at(Coord(new_row, new_col))
-            done = new_cell_kind == Cell.Goal
-            reward = self.world.reward[new_cell_kind]
-            return new_state, reward, done
+        self.transitions = {"reward": [], "next": [], "goal": []}
 
-        dist = {
-            s: {a: [] for a in range(self.n_actions)} for s in range(self.world.n_cells)
-        }
+        for state in range(self.world.n_states):
+            treward, tnext, tgoal = transitions_from_state(state)
+            self.transitions["reward"] += [treward]
+            self.transitions["next"] += [tnext]
+            self.transitions["goal"] += [tgoal]
 
-        for row in range(self.world.size):
-            for col in range(self.world.size):
-                s = to_state(row, col)
-
-                for a in range(4):
-                    li = dist[s][a]
-                    ctype = self.world.cell_at(Coord(row, col))
-
-                    if ctype == Cell.Goal:
-                        r = self.world.reward[ctype]
-                        li.append((1.0, s, r, True))
-                    else:
-                        li.append((1.0, *update_dist_matrix(row, col, a)))
-
-        return dist
+        self.transitions["reward"] = numpy.array(
+            self.transitions["reward"], dtype=numpy.float32
+        )
+        self.transitions["next"] = numpy.array(
+            self.transitions["next"], dtype=numpy.int32
+        )
+        self.transitions["goal"] = numpy.array(
+            self.transitions["goal"], dtype=numpy.bool
+        )

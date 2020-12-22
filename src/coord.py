@@ -12,12 +12,32 @@ __email__ = [
 
 
 class Coord:
+    _SIZE = None
+
     def __init__(self, x: int, y: int):
         self.x = x
         self.y = y
 
+    def copy(self):
+        return type(self)(self.x, self.y)
+
+    @staticmethod
+    def from_state(state: int):
+        assert (
+            Coord._SIZE is not None
+        ), "Coord struct needs to have its static attribute _WIDTH set.."
+        return Coord(state % Coord._SIZE, state // Coord._SIZE)
+
+    def to_state(self) -> int:
+        assert (
+            Coord._SIZE is not None
+        ), "Coord struct needs to have its static attribute _WIDTH set.."
+        return self.y * Coord._SIZE + self.x
+
     def __add__(self, other):
-        return Coord(self.x + other.x, self.y + other.y)
+        x = min(max(self.x + other.x, 0), Coord._SIZE - 1)
+        y = min(max(self.y + other.y, 0), Coord._SIZE - 1)
+        return Coord(x, y)
 
     def __eq__(self, other):
         if isinstance(other, Coord):

@@ -14,10 +14,10 @@ __email__ = [
 import numpy
 import enum
 
-import agent
-
+from agent import Agent
 from coord import Coord
 from cell import Cell
+from action import Action
 
 
 class World:
@@ -38,20 +38,21 @@ class World:
         ), "Ending point out of grid.."
 
         self.size = size
-        self.n_cells = size ** 2
-        self.agent_pos = Coord(x_start, y_start)
+        Coord._SIZE = size
+        self.n_states = size ** 2
+
+        self.state = Coord(x_start, y_start)
 
         if x_end is None:
             x_end = size - 1
-
         if y_end is None:
             y_end = size - 1
 
-        self.reward = {
+        self._reward = {
             Cell.Empty: -1,
             Cell.Trap: -2 * (size - 1),
             Cell.Start: -1,
-            Cell.Goal: 2 * (size - 1),
+            Cell.Goal: 20 * (size - 1),
         }
 
         self.grid = [
@@ -70,16 +71,44 @@ class World:
         if trap_conf is not None:
             self.gen_traps(x_start, y_start, x_end, y_end, trap_conf)
 
-    def process_action(self, action: Coord):
-        tmp = self.agent_pos + action
+        self.flat_reward_map = numpy.array(
+            [self._reward[cell] for line in self.grid for cell in line],
+            dtype=numpy.float32,
+        )
 
-        if tmp.x >= 0 and tmp.x < self.size:
-            if tmp.y >= 0 and tmp.y < self.size:
-                self.agent_pos = tmp
+    def _inject(self, agent: Agent):
+        self.agent = agent
 
-        ctype = self.grid[self.agent_pos.y][self.agent_pos.x]
+    def reward(self, elt: Coord or (int, int) or Cell) -> int:
+        if isinstance(elt, Cell):
+            return self._reward[elt]
+        elif isinstance(elt, Coord):
+            return self._reward[self.grid[elt.y][elt.x]]
+        elif isinstance(elt, tuple):
+            return self._reward[self.grid[elt[0]][elt[1]]]
+        elif isinstance(elt, int):
+            assert elt >= 0 and elt < self.n_states, "Index out of range.."
+            state = Coord.from_state(elt)
+            return self._reward[self.grid[state.y][state.x]]
+        else:
+            raise f"Unrecognized type for type {elt}.."
 
-        return self.reward[ctype], ctype == Cell.Goal
+    def cell(self, elt: Coord or (int, int) or int) -> Cell:
+        if isinstance(elt, Coord):
+            return self.grid[elt.y][elt.x]
+        elif isinstance(elt, tuple):
+            return self.grid[elt[0]][elt[1]]
+        elif isinstance(elt, int):
+            assert elt >= 0 and elt < self.n_states, "Index out of range.."
+            state = Coord.from_state(elt)
+            return self.grid[state.y][state.x]
+        else:
+            raise f"Unrecognized type for type {elt}.."
+
+    def process_action(self, action: Action) -> (float, bool):
+        self.agent.pos = self.agent.pos + action.value
+        ctype = self.grid[self.agent.pos.y][self.agent.pos.x]
+        return self._reward[ctype], ctype == Cell.Goal
 
     def gen_traps(
         self, x_start: int, y_start: int, x_end: int, y_end: int, trap_conf: dict
@@ -135,16 +164,14 @@ class World:
                 if pos != start and pos != end:
                     self.grid[coord["y"]][coord["x"]] = Cell.Trap
 
-    def cell_at(self, pos: Coord) -> Cell:
-        return self.grid[pos.y][pos.x]
-
     def __repr__(self) -> str:
+        cell_width = 7
         sep: str = f"\033[1;30m{'':5}+"
         head: str = f"\033[1;33m{'':5}"
 
         for idx in range(len(self.grid)):
-            sep += f"{'':-<6}+"
-            head += f" {idx:^6}"
+            sep += f"{'':-<{cell_width}}+"
+            head += f" {idx:^{cell_width}}"
 
         sep += "\033[0m\n"
         head += "\033[0m\n"
@@ -155,20 +182,55 @@ class World:
             grid_repr += sep
             grid_repr += f"\033[1;33m{lidx:^5}\033[1;30m|\033[0m"
 
+            if self.agent.is_logic == True:
+                values = self.agent.value()
+                min_val, max_val = values.min(), values.max()
+                if min_val == max_val:
+                    scales = None
+                else:
+                    scales = [
+                        ([min_val, max_val * 1/5], '\033[0;31m'), 
+                        ([max_val * 1/5, max_val * 2/5], '\033[0;35m'), 
+                        ([max_val * 2/5, max_val * 3/5], '\033[0;37m'), 
+                        ([max_val * 3/5, max_val * 4/5], '\033[0;34m'), 
+                        ([max_val * 4/5, max_val], '\033[0;36m'),
+                        ([max_val, max_val + 1.0], '\033[1;36m'),
+                    ]
+                action_line, value_line = f"{'':<5}\033[1;30m|\033[0m", f"{'':<5}\033[1;30m|\033[0m"
+
             for cidx, col in enumerate(line):
                 elt = str(col)
-                width = 6 if elt == "" else 5
+                width = cell_width if elt == "" else cell_width - 1
 
-                if self.agent_pos == Coord(cidx, lidx):
+                if self.agent.pos == Coord(cidx, lidx):
                     if col == Cell.Trap:
                         elt += "💀🩹"
                         width -= 2
                     else:
-                        elt += "🪖"
+                        elt += f"{self.agent}"
                         width -= 1
 
                 grid_repr += f"{elt:^{width}}\033[1;30m|\033[0m"
+                if self.agent.is_logic == True:
+                    action_line += (
+                        f"{Action.from_idx(self.agent.policy(Coord(cidx, lidx))):^{cell_width}}\033[1;30m|\033[0m"
+                    )
+                    
+                    value = self.agent.value(Coord(cidx, lidx))
+                    if scales is not None:
+                        is_max = False
+                        for scale, color in scales:
+                            if scale[0] <= value < scale[1]:
+                                value_line += f'{color}'
+                                is_max = True
+                                break
+
+                    value_line += f"{value:^{cell_width}.3f}\033[1;30m|\033[0m"
 
             grid_repr += "\n"
+
+            if self.agent.is_logic == True:
+                grid_repr += action_line + "\n"
+                grid_repr += value_line + "\n"
 
         return grid_repr + sep

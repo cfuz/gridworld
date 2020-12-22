@@ -54,19 +54,27 @@ if __name__ == "__main__":
         cfg = yaml.safe_load(file)
 
     env = env.GridWorld(cfg)
-    print(env.world.grid[11][11])
 
     atype = cfg["agent"]["type"].lower()
     if atype in ["random", "rand"]:
-        agent = RandomAgent(env.action_space)
+        agent = RandomAgent(env.actions.to_indices(), **cfg["world"]["start"])
     elif atype == "mdp":
-        agent = MdpAgent(env.action_space)
-    elif atype == "sarsa":
-        agent = SarsaAgent(env.action_space)
-    elif atype == "q":
-        agent = QAgent(env.action_space)
+        agent = MdpAgent(
+            env.actions.to_indices(),
+            cfg["world"]["start"]["x"],
+            cfg["world"]["start"]["y"],
+            env.transitions,
+            cfg["agent"]["discount"],
+            cfg["agent"]["obey_factor"],
+        )
+    # elif atype == "sarsa":
+    #     agent = SarsaAgent(env.action_space)
+    # elif atype == "q":
+    #     agent = QAgent(env.action_space)
     else:
         raise f"Unknown type of agent {atype}.."
+    
+    env.inject(agent)
 
     state = env.gen_obs()
     env.render()
@@ -100,12 +108,11 @@ if __name__ == "__main__":
 
         if not stop:
             for _ in range(n_steps):
-                curr_state = env.world.agent_pos
+                prev_state = agent.pos.copy()
+                action = agent()
+                actions += f" {env.actions.from_idx(action)}"
 
-                action = agent(state)
-                actions += f" {env.idx_to_action[action]}"
-
-                state, reward, done, _ = env.step(action)
+                state, reward, done = env.step(action)
 
                 if done == True:
                     stop = True
@@ -113,27 +120,11 @@ if __name__ == "__main__":
 
             draw_header()
             env.render()
+
             print(
-                f"\033[1;34mLast reward:\033[0m {reward} [ from: {curr_state}, to: {env.world.agent_pos} ]"
+                f"\033[1;34mLast reward:\033[0m {reward} [ from: {prev_state}, to: {env.world.agent.pos} ]"
             )
             print("\033[1;34mHistory    :\033[0m", end="")
             print(actions)
 
             n_steps = 1
-
-    # for _ in range(cfg['max_steps']):
-    #     action = agent(state)
-    #     print(env.actions_idx[action])
-    #     new_state, reward, done, _ = env.step(action)
-
-    #     # Update value function / policy
-    #     print(env.dist[state][action])
-
-    #     # New state is state
-    #     state = new_state
-
-    #     env.render()
-    #     if done == True:
-    #         break
-
-    #     time.sleep(1.0)
