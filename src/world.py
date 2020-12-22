@@ -52,7 +52,7 @@ class World:
             Cell.Empty: -1,
             Cell.Trap: -2 * (size - 1),
             Cell.Start: -1,
-            Cell.Goal: 20 * (size - 1),
+            Cell.Goal: 2 * (size - 1),
         }
 
         self.grid = [
@@ -166,8 +166,8 @@ class World:
 
     def __repr__(self) -> str:
         cell_width = 7
-        sep: str = f"\033[1;30m{'':5}+"
-        head: str = f"\033[1;33m{'':5}"
+        sep = f"\033[1;30m{'':5}+"
+        head = f"\033[1;33m{'':5}"
 
         for idx in range(len(self.grid)):
             sep += f"{'':-<{cell_width}}+"
@@ -176,61 +176,91 @@ class World:
         sep += "\033[0m\n"
         head += "\033[0m\n"
 
-        grid_repr: str = head
+        grid_repr = head
 
         for lidx, line in enumerate(self.grid):
             grid_repr += sep
-            grid_repr += f"\033[1;33m{lidx:^5}\033[1;30m|\033[0m"
+
+            elt_line = f"\033[1;33m{lidx:^5}\033[1;30m|\033[0m"
 
             if self.agent.is_logic == True:
                 values = self.agent.value()
                 min_val, max_val = values.min(), values.max()
+                val_range = max_val - min_val
                 if min_val == max_val:
                     scales = None
                 else:
                     scales = [
-                        ([min_val, max_val * 1/5], '\033[0;31m'), 
-                        ([max_val * 1/5, max_val * 2/5], '\033[0;35m'), 
-                        ([max_val * 2/5, max_val * 3/5], '\033[0;37m'), 
-                        ([max_val * 3/5, max_val * 4/5], '\033[0;34m'), 
-                        ([max_val * 4/5, max_val], '\033[0;36m'),
-                        ([max_val, max_val + 1.0], '\033[1;36m'),
+                        ([min_val, min_val + (val_range * 1 / 5)], "\033[0;31m"),
+                        (
+                            [
+                                min_val + (val_range * 1 / 5),
+                                min_val + (val_range * 2 / 5),
+                            ],
+                            "\033[0;35m",
+                        ),
+                        (
+                            [
+                                min_val + (val_range * 2 / 5),
+                                min_val + (val_range * 3 / 5),
+                            ],
+                            "\033[0;37m",
+                        ),
+                        (
+                            [
+                                min_val + (val_range * 3 / 5),
+                                min_val + (val_range * 4 / 5),
+                            ],
+                            "\033[0;34m",
+                        ),
+                        (
+                            [min_val + (val_range * 4 / 5), min_val + val_range],
+                            "\033[0;36m",
+                        ),
+                        ([max_val, max_val + 1.0], "\033[1;36m"),
                     ]
-                action_line, value_line = f"{'':<5}\033[1;30m|\033[0m", f"{'':<5}\033[1;30m|\033[0m"
+                action_line, value_line = (
+                    f"{'':<5}\033[1;30m|\033[0m",
+                    f"{'':<5}\033[1;30m|\033[0m",
+                )
 
-            for cidx, col in enumerate(line):
-                elt = str(col)
+            for cidx, cell in enumerate(line):
+                elt = str(cell)
                 width = cell_width if elt == "" else cell_width - 1
 
                 if self.agent.pos == Coord(cidx, lidx):
-                    if col == Cell.Trap:
-                        elt += "💀🩹"
-                        width -= 2
-                    else:
-                        elt += f"{self.agent}"
-                        width -= 1
+                    elt += f"{self.agent}"
+                    width -= 1
 
-                grid_repr += f"{elt:^{width}}\033[1;30m|\033[0m"
+                elt_line += f"{elt:^{width}}\033[1;30m|\033[0m"
+
                 if self.agent.is_logic == True:
-                    action_line += (
-                        f"{Action.from_idx(self.agent.policy(Coord(cidx, lidx))):^{cell_width}}\033[1;30m|\033[0m"
-                    )
-                    
-                    value = self.agent.value(Coord(cidx, lidx))
-                    if scales is not None:
-                        is_max = False
-                        for scale, color in scales:
-                            if scale[0] <= value < scale[1]:
-                                value_line += f'{color}'
-                                is_max = True
-                                break
+                    if cell == Cell.Goal:
+                        value_line += f"{'':>{cell_width}}"
+                        action_line += f"{'':>{cell_width}}"
+                    else:
+                        value = self.agent.value(Coord(cidx, lidx))
+                        if scales is not None:
+                            is_max = False
+                            for scale, color in scales:
+                                if scale[0] <= value < scale[1]:
+                                    value_line += f"{color}"
+                                    action_line += f"{color}"
+                                    is_max = True
+                                    break
 
-                    value_line += f"{value:^{cell_width}.3f}\033[1;30m|\033[0m"
+                        value_line += f"{value:^{cell_width}.3f}"
+                        action_line += f"{Action.from_idx(self.agent.policy(Coord(cidx, lidx))):>{cell_width}}"
 
-            grid_repr += "\n"
+                    action_line += f"\033[1;30m|\033[0m"
+                    value_line += f"\033[1;30m|\033[0m"
+
+            if self.agent.is_logic == True:
+                grid_repr += value_line + "\n"
+
+            grid_repr += elt_line + "\n"
 
             if self.agent.is_logic == True:
                 grid_repr += action_line + "\n"
-                grid_repr += value_line + "\n"
 
         return grid_repr + sep

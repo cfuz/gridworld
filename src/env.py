@@ -65,6 +65,14 @@ class GridWorld(gym.Env):
 
         reward, done = self.world.process_action(action)
 
+        self.world.agent.reward += reward
+        self.world.agent.last_action = action
+
+        if self.world.cell(self.world.agent.pos) == Cell.Trap:
+            self.world.agent.is_on_trap = True
+        else:
+            self.world.agent.is_on_trap = False
+
         if self.n_steps >= self.step_max:
             done = True
 
@@ -78,11 +86,21 @@ class GridWorld(gym.Env):
     def _gen_world(self):
         self.world = World(
             self.cfg["world"]["size"],
-            trap_conf=self.cfg["world"]["traps"] if "traps" in self.cfg["world"] else None,
-            x_start=self.cfg["world"]["start"]["x"] if "x" in self.cfg["world"]["start"] else None,
-            y_start=self.cfg["world"]["start"]["y"] if "y" in self.cfg["world"]["start"] else None,
-            x_end=self.cfg["world"]["end"]["y"] if "x" in self.cfg["world"]["end"] else None,
-            y_end=self.cfg["world"]["end"]["y"] if "y" in self.cfg["world"]["end"] else None,
+            trap_conf=self.cfg["world"]["traps"]
+            if "traps" in self.cfg["world"]
+            else None,
+            x_start=self.cfg["world"]["start"]["x"]
+            if "x" in self.cfg["world"]["start"]
+            else None,
+            y_start=self.cfg["world"]["start"]["y"]
+            if "y" in self.cfg["world"]["start"]
+            else None,
+            x_end=self.cfg["world"]["end"]["y"]
+            if "x" in self.cfg["world"]["end"]
+            else None,
+            y_end=self.cfg["world"]["end"]["y"]
+            if "y" in self.cfg["world"]["end"]
+            else None,
         )
 
     def _gen_dist(self):
@@ -91,7 +109,8 @@ class GridWorld(gym.Env):
                 return (state, 0.0, True)
             else:
                 nstate = (
-                    Coord(state % self.world.size, state // self.world.size) + action.value
+                    Coord(state % self.world.size, state // self.world.size)
+                    + action.value
                 )
                 if action == Action.North:
                     nstate.y = max(nstate.y, 0)

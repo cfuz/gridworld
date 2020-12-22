@@ -17,6 +17,7 @@ import numpy
 
 from cell import Cell
 from coord import Coord
+from action import Action
 
 
 class Agent(abc.ABC):
@@ -27,14 +28,24 @@ class Agent(abc.ABC):
         self.n_actions = len(action_space)
 
         self.pos = Coord(x, y)
+        self.reward = 0.0
 
         self.is_logic = is_logic
+
+        self.is_on_trap = False
+        self.last_action = None
 
     def __repr__(self):
         return str(self)
 
     def __str__(self):
-        return "🪖"
+        elt = "🪖" if not self.is_on_trap else "💀"
+        if self.last_action:
+            if self.last_action == Action.West:
+                elt = f"{self.last_action}" + elt
+            else:
+                elt += f"{self.last_action}"
+        return elt
 
     @abc.abstractmethod
     def __call__(self, state: int):

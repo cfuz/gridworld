@@ -45,10 +45,10 @@ class Action(enum.Enum):
 
     def __str__(self):
         if self == Action.North:
-            return ""
+            return ""
         elif self == Action.East:
-            return ""
+            return ""
         elif self == Action.South:
-            return ""
+            return ""
         else:
-            return ""
+            return ""

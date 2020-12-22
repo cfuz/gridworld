@@ -76,21 +76,32 @@ class MdpAgent(Agent):
             return self.state_policy
 
     def __call__(self) -> int:
+        def compute_action_value(
+            state: int, action: int, next_states: numpy.array, state_value: numpy.array
+        ) -> numpy.float32:
+            # Computes the expected reward and value given the probability distribution
+            expected_reward = (
+                self.reward_transitions[state, :] * self.dist[action, :]
+            ).sum()
+            expected_value = (state_value[next_states] * self.dist[action, :]).sum()
+
+            # Balancing the instantaneous expected reward with future value expectation
+            return expected_reward + self.discount * expected_value
+
         current_state_value = numpy.copy(self.state_values)
 
+        # Evaluating current policy
+        for state, next_states in enumerate(self.state_transitions):
+            self.state_values[state] = compute_action_value(
+                state, self.state_policy[state], next_states, current_state_value
+            )
+
+        # Improving policy
         for state, next_states in enumerate(self.state_transitions):
             for action in self.action_space:
-                # Computes the expected reward and value given the probability distribution
-                expected_reward = (
-                    self.reward_transitions[state, :] * self.dist[action,:]
-                ).sum()
-                expected_value = (
-                    current_state_value[self.state_transitions[state, :]]
-                    * self.dist[action]
-                ).sum()
-
-                # Balancing the instantaneous expected reward with future value expectation
-                action_value = expected_reward + self.discount * expected_value
+                action_value = compute_action_value(
+                    state, action, next_states, current_state_value
+                )
 
                 if self.state_values[state] < action_value:
                     self.state_values[state] = action_value
