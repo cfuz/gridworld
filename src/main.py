@@ -132,12 +132,12 @@ if __name__ == "__main__":
 
             draw_header()
             env.render()
-
-            print(f"\033[1;34mTotal  :\033[0m {agent.reward}", end=" ")
+            print(f"\033[1;34mIteration:\033[0m {env.n_steps:_d} /{env.step_max:_d}")
+            print(f"\033[1;34mTotal    :\033[0m {agent.reward}", end=" ")
             print(
                 f"[ from: {prev_state}, to: {env.world.agent.pos}, reward: {reward} ]"
             )
-            print("\033[1;34mHistory:\033[0m", end="")
+            print("\033[1;34mHistory  :\033[0m", end="")
             print(actions)
 
             n_steps = 1
