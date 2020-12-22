@@ -1,0 +1,17 @@
+max_steps: 1000
+seed: 1337
+
+world:
+  size: 12
+  start:
+    x: 0
+    y: 0
+  end:
+    x: 11
+    y: 11
+
+agent:
+  type: 'mdp'
+  discount: 0.8
+  obey_factor: 0.8
+

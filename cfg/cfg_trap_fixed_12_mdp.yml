@@ -1,0 +1,53 @@
+max_steps: 10000
+seed: 1337
+
+world:
+  size: 12
+  start:
+    x: 0
+    y: 0
+  end:
+    x: 11
+    y: 11
+  traps:
+    type: 'fixed'
+    dist:
+      - x: 0
+        y: 3
+      - x: 1
+        y: 3
+      - x: 2
+        y: 3
+      - x: 3
+        y: 3
+      - x: 4
+        y: 3
+      - x: 5
+        y: 3
+      - x: 6
+        y: 3
+      - x: 7
+        y: 3
+      
+      - x: 4
+        y: 7
+      - x: 5
+        y: 7
+      - x: 6
+        y: 7
+      - x: 7
+        y: 7
+      - x: 8
+        y: 7
+      - x: 9
+        y: 7
+      - x: 10
+        y: 7
+      - x: 11
+        y: 7
+
+agent:
+  type: 'mdp'
+  discount: 0.8
+  obey_factor: 0.8
+

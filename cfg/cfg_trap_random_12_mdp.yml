@@ -1,4 +1,4 @@
-max_steps: 1000
+max_steps: 10000
 seed: 1337
 
 world:
@@ -9,11 +9,11 @@ world:
   end:
     x: 11
     y: 11
-  # traps:
-  #   type: 'random'
-  #   dist:
-  #     empty: 0.9
-  #     trap: 0.1
+  traps:
+    type: 'random'
+    dist:
+      empty: 0.8
+      trap: 0.2
 
 agent:
   type: 'mdp'

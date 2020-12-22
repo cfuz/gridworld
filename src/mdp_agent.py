@@ -82,7 +82,7 @@ class MdpAgent(Agent):
             for action in self.action_space:
                 # Computes the expected reward and value given the probability distribution
                 expected_reward = (
-                    self.reward_transitions[state, :] * self.dist[action]
+                    self.reward_transitions[state, :] * self.dist[action,:]
                 ).sum()
                 expected_value = (
                     current_state_value[self.state_transitions[state, :]]
@@ -98,5 +98,5 @@ class MdpAgent(Agent):
 
         # Returns the best policy with probability self.p_obey
         return numpy.random.choice(
-            self.action_space, p=self.dist[self.state_policy[state]]
+            self.action_space, p=self.dist[self.state_policy[self.pos.to_state()]]
         )
