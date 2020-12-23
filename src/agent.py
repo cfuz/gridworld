@@ -24,16 +24,24 @@ class Agent(abc.ABC):
     def __init__(
         self, action_space: numpy.array, x: int, y: int, is_logic: bool = False
     ):
+        self.is_logic = is_logic
+
         self.action_space = action_space
         self.n_actions = len(action_space)
 
-        self.pos = Coord(x, y)
-        self.reward = 0.0
+        self.start_pos = Coord(x, y)
+        self.pos = self.start_pos.copy()
 
-        self.is_logic = is_logic
+        self.score = 0.0
+        self.last_reward = 0.0
+        self.last_action = None
 
         self.is_on_trap = False
-        self.last_action = None
+
+        self.n_episodes = 0
+        self.n_steps = 0
+        self.steps = []
+        self.scores = []
 
     def __repr__(self):
         return str(self)
@@ -47,8 +55,41 @@ class Agent(abc.ABC):
                 elt += f"{self.last_action}"
         return elt
 
+    def reset(self):
+        self.scores += [self.score]
+        self.steps += [self.n_steps]
+        self.n_episodes += 1
+
+        self.score = 0.0
+        self.n_steps = 0
+
+        self.pos = self.start_pos.copy()
+
+        self.last_reward = 0.0
+        self.last_action = None
+
+        self.is_on_trap = False
+
+    def history(self) -> list:
+        return list(zip(self.scores, self.steps))
+
     @abc.abstractmethod
-    def __call__(self, state: int):
+    def update(self, action: Action, reward: float, state: int or Coord, is_trap: bool):
+        self.pos = state if isinstance(state, Coord) else Coord.from_state(state)
+
+        self.score += reward
+        self.n_steps += 1
+
+        self.last_reward = reward
+        self.last_action = action
+
+        if is_trap:
+            self.is_on_trap = True
+        else:
+            self.is_on_trap = False
+
+    @abc.abstractmethod
+    def __call__(self, state: int or Coord) -> int:
         pass
 
     @abc.abstractmethod

@@ -48,6 +48,6 @@ world:
 
 agent:
   type: 'mdp'
-  discount: 0.8
-  obey_factor: 0.8
+  discount: 0.9
+  obey_factor: 0.9
 

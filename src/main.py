@@ -18,10 +18,12 @@ import env
 
 from action import Action
 from coord import Coord
+from agent import Agent
 from random_agent import RandomAgent
 from mdp_agent import MdpAgent
 from sarsa_agent import SarsaAgent
 from q_agent import QAgent
+
 
 GRID_CFG = ""
 AGENT_CFG = ""
@@ -31,17 +33,57 @@ def draw_header():
     print("\033c", end="")
     print(
         f"""\
-    .d8888b.          d8b      888 888       888                  888      888
-    d88P  Y88b         Y8P      888 888   o   888                  888      888
-    888    888                  888 888  d8b  888                  888      888
-    888        888d888 888  .d88888 888 d888b 888  .d88b.  888d888 888  .d88888
-    888  88888 888P"   888 d88" 888 888d88888b888 d88""88b 888P"   888 d88" 888
-    888    888 888     888 888  888 88888P Y88888 888  888 888     888 888  888
-    Y88b  d88P 888     888 Y88b 888 8888P   Y8888 Y88..88P 888     888 Y88b 888
-    "Y8888P88 888     888  "Y88888 888P     Y888  "Y88P"  888     888  "Y88888
-    {AGENT_CFG} {GRID_CFG}
+\033[1;33mGRIDWORLD {__version__}
+\033[0;33m{GRID_CFG}{AGENT_CFG}\033[0m
     """
     )
+
+
+def draw_state(env: env.GridWorld, agent: Agent, prev_state: Coord, actions: str):
+    draw_header()
+    env.render()
+    print(f"\033[1;34mIteration:\033[0m {agent.n_steps:_d} /{env.step_max:_d}")
+    print(
+        f"""\
+\033[1;34mTotal    :\033[0m {agent.score} \
+[ from: {prev_state}, to: {env.world.agent.pos}, reward: {agent.last_reward} ]\
+    """
+    )
+    print(f"\033[1;34mHistory\033[0m")
+    print(f"  \033[0;34mLast actions:\033[0m {actions}")
+    print("  \033[0;34mBenchmark\033[0m")
+    for episode_idx, (score, steps) in enumerate(agent.history()):
+        print(
+            f"    \033[1m#{episode_idx:<3d}\033[0m score: {score:>+8.1f}, steps: {steps}"
+        )
+
+
+def run_steps(
+    n_steps: int, env: env.GridWorld, agent: Agent, actions: str, reset: bool
+) -> (str, Coord):
+    if reset:
+        agent.reset()
+
+    state = agent.pos.copy()
+    for _ in range(n_steps):
+        prev_state = agent.pos.copy()
+
+        action = agent(env.gen_obs())
+        action = env.actions.from_idx(action)
+        actions += f" {action}"
+        if len(actions) > 80:
+            actions = actions[2 : len(actions) : 1]
+
+        state, reward, done, is_trap = env.step(prev_state, action)
+
+        n_episode, score, n_steps, _optimized = agent.update(
+            action, reward, state, is_trap
+        )
+
+        if done:
+            break
+
+    return (actions, prev_state, done)
 
 
 if __name__ == "__main__":
@@ -57,25 +99,36 @@ if __name__ == "__main__":
         cfg = yaml.safe_load(file)
 
     env = env.GridWorld(cfg)
-    if "traps" in cfg["world"] and cfg["world"]["traps"]["type"] == "random":
-        GRID_CFG = f'[ trap density: {cfg["world"]["traps"]["dist"]["trap"]} ]'
+    if "traps" in cfg["world"]:
+        if cfg["world"]["traps"]["type"] == "random":
+            GRID_CFG = f'RANDOM  DENSITY: {cfg["world"]["traps"]["dist"]["trap"]}   '
+        elif cfg["world"]["traps"]["type"] == "fixed":
+            GRID_CFG = f"FIXED   "
+    else:
+        GRID_CFG = f"NOTRAP   "
 
     atype = cfg["agent"]["type"].lower()
     if atype in ["random", "rand"]:
-        AGENT_CFG = '[ agent: "random" ]'
+        AGENT_CFG = "RANDAGT"
         agent = RandomAgent(env.actions.to_indices(), **cfg["world"]["start"])
     elif atype == "mdp":
-        AGENT_CFG = f'[ agent: "mdp", discount: {cfg["agent"]["discount"]}, obey: {cfg["agent"]["discount"]} ]'
+        AGENT_CFG = f'MDPAGT  DISC: {cfg["agent"]["discount"]}  OBEY: {cfg["agent"]["obey_factor"]}'
+        del cfg["agent"]["type"]
         agent = MdpAgent(
             env.actions.to_indices(),
-            cfg["world"]["start"]["x"],
-            cfg["world"]["start"]["y"],
             env.transitions,
-            cfg["agent"]["discount"],
-            cfg["agent"]["obey_factor"],
+            **cfg["world"]["start"],
+            **cfg["agent"],
         )
-    # elif atype == "sarsa":
-    #     agent = SarsaAgent(env.action_space)
+    elif atype == "sarsa":
+        AGENT_CFG = f'SARSAAGT  DISC: {cfg["agent"]["discount"]}  OBEY: {cfg["agent"]["obey_factor"]}  LR: {cfg["agent"]["learning_rate"]}'
+        del cfg["agent"]["type"]
+        agent = SarsaAgent(
+            env.actions.to_indices(),
+            env.transitions,
+            **cfg["world"]["start"],
+            **cfg["agent"],
+        )
     # elif atype == "q":
     #     agent = QAgent(env.action_space)
     else:
@@ -89,6 +142,7 @@ if __name__ == "__main__":
     state = env.gen_obs()
 
     stop = False
+    done = False
     n_steps = 1
     actions = ""
 
@@ -116,28 +170,26 @@ if __name__ == "__main__":
                     time.sleep(0.5)
 
         if not stop:
-            for _ in range(n_steps):
-                prev_state = agent.pos.copy()
-                action = agent()
+            actions, prev_state, done = run_steps(n_steps, env, agent, actions, done)
+            # if agent.optimized:
+            #     agent.reset()
 
-                actions += f" {env.actions.from_idx(action)}"
-                if len(actions) > 80:
-                    actions = actions[2 : len(actions) : 1]
+            # for _ in range(n_steps):
+            #     prev_state = agent.pos.copy()
 
-                state, reward, done = env.step(action)
+            #     action = agent(env.gen_obs())
+            #     action = env.actions.from_idx(action)
+            #     actions += f" {action}"
+            #     if len(actions) > 80:
+            #         actions = actions[2 : len(actions) : 1]
 
-                if done == True:
-                    stop = True
-                    break
+            #     state, reward, done, is_trap = env.step(action)
 
-            draw_header()
-            env.render()
-            print(f"\033[1;34mIteration:\033[0m {env.n_steps:_d} /{env.step_max:_d}")
-            print(f"\033[1;34mTotal    :\033[0m {agent.reward}", end=" ")
-            print(
-                f"[ from: {prev_state}, to: {env.world.agent.pos}, reward: {reward} ]"
-            )
-            print("\033[1;34mHistory  :\033[0m", end="")
-            print(actions)
+            #     n_episode, score, n_steps, optimized = n_agent.update(state, action, reward, is_trap)
+
+            #     if optimized or done:
+            #         break
+
+            draw_state(env, agent, prev_state, actions)
 
             n_steps = 1

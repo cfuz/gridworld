@@ -55,30 +55,23 @@ class GridWorld(gym.Env):
 
     def render(self, close=False):
         # Render the environment to the screen
-        print(self.world)
+        print(self.world, end="")
 
-    def step(self, action: int or Action) -> (int, float, bool):
+    def step(
+        self, state: int or Coord, action: int or Action
+    ) -> (Coord, float, bool, bool):
         if isinstance(action, int) or isinstance(action, numpy.int32):
             action = self.actions.from_idx(action)
-
         self.n_steps += 1
+        next_state, reward, done = self.world.process_action(state, action)
+        # if self.n_steps >= self.step_max:
+        #     done = True
+        return next_state, reward, done, self.is_trap(next_state)
 
-        reward, done = self.world.process_action(action)
-
-        self.world.agent.reward += reward
-        self.world.agent.last_action = action
-
-        if self.world.cell(self.world.agent.pos) == Cell.Trap:
-            self.world.agent.is_on_trap = True
-        else:
-            self.world.agent.is_on_trap = False
-
-        if self.n_steps >= self.step_max:
-            done = True
-
-        obs = self.gen_obs()
-
-        return obs, reward, done
+    def is_trap(self, state: int or Coord) -> bool:
+        if isinstance(state, int):
+            state = Coord.from_state(state)
+        return self.world.cell(state) == Cell.Trap
 
     def gen_obs(self):
         return self.world.agent.pos.to_state()

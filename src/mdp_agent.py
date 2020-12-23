@@ -15,6 +15,7 @@ import numpy
 
 from agent import Agent
 from coord import Coord
+from action import Action
 
 
 # ref: https://www.youtube.com/watch?v=9g32v7bK3Co
@@ -22,9 +23,9 @@ class MdpAgent(Agent):
     def __init__(
         self,
         action_space: numpy.array,
+        transitions: dict,
         x: int,
         y: int,
-        transitions: dict,
         discount: float,
         obey_factor: float,
     ):
@@ -44,7 +45,7 @@ class MdpAgent(Agent):
         self.state_values = numpy.zeros(n_states, dtype=numpy.float32)
         self.state_policy = numpy.zeros(n_states, dtype=numpy.int32)
 
-        # Defining randomness in decision
+        # Epsilon greedy policy: defining randomness in decision
         self.p_obey = obey_factor
         self.p_disobey = (1.0 - self.p_obey) / (self.n_actions - 1)
         self.dist = (
@@ -56,6 +57,66 @@ class MdpAgent(Agent):
         # Storing the 'rules'
         self.reward_transitions = numpy.copy(transitions["reward"])
         self.state_transitions = numpy.copy(transitions["next"])
+
+        self.epsilon = 1.0e-5
+        self.is_optimized = False
+
+    def update(
+        self,
+        action: Action,
+        reward: float,
+        state: int or Coord,
+        is_trap: bool,
+        info: dict = None,
+    ) -> (int, float, int, bool):
+        def compute_action_value(
+            state: int, action: int, next_states: numpy.array, state_value: numpy.array
+        ) -> numpy.float32:
+            # Computes the expected reward and value given the probability distribution
+            expected_reward = (
+                self.reward_transitions[state, :] * self.dist[action, :]
+            ).sum()
+            expected_value = (state_value[next_states] * self.dist[action, :]).sum()
+
+            # Balancing the instantaneous expected reward with future value expectation
+            return expected_reward + self.discount * expected_value
+
+        def is_difference_substancial(
+            old_state_value: numpy.array, new_state_value: numpy.array
+        ) -> float:
+            return numpy.linalg.norm(new_state_value - old_state_value) > self.epsilon
+
+        if isinstance(state, Coord):
+            state = state.to_state()
+
+        if not self.is_optimized:
+            old_state_values = numpy.copy(self.state_values)
+
+            # Evaluating current policy
+            for s, next_states in enumerate(self.state_transitions):
+                self.state_values[s] = compute_action_value(
+                    s, self.state_policy[s], next_states, old_state_values
+                )
+
+            # Improving policy
+            for s, next_states in enumerate(self.state_transitions):
+                for a in self.action_space:
+                    action_value = compute_action_value(
+                        s, a, next_states, old_state_values
+                    )
+
+                    if self.state_values[s] < action_value:
+                        self.state_values[s] = action_value
+                        self.state_policy[s] = a
+
+            self.is_optimized = not is_difference_substancial(
+                old_state_values, self.state_values
+            )
+
+        # Updating state
+        super().update(action, reward, state, is_trap)
+
+        return (self.n_episodes, self.score, self.n_steps, self.is_optimized)
 
     def value(self, state: int or Coord = None) -> numpy.float32 or numpy.array:
         if state is not None:
@@ -75,39 +136,8 @@ class MdpAgent(Agent):
         else:
             return self.state_policy
 
-    def __call__(self) -> int:
-        def compute_action_value(
-            state: int, action: int, next_states: numpy.array, state_value: numpy.array
-        ) -> numpy.float32:
-            # Computes the expected reward and value given the probability distribution
-            expected_reward = (
-                self.reward_transitions[state, :] * self.dist[action, :]
-            ).sum()
-            expected_value = (state_value[next_states] * self.dist[action, :]).sum()
-
-            # Balancing the instantaneous expected reward with future value expectation
-            return expected_reward + self.discount * expected_value
-
-        current_state_value = numpy.copy(self.state_values)
-
-        # Evaluating current policy
-        for state, next_states in enumerate(self.state_transitions):
-            self.state_values[state] = compute_action_value(
-                state, self.state_policy[state], next_states, current_state_value
-            )
-
-        # Improving policy
-        for state, next_states in enumerate(self.state_transitions):
-            for action in self.action_space:
-                action_value = compute_action_value(
-                    state, action, next_states, current_state_value
-                )
-
-                if self.state_values[state] < action_value:
-                    self.state_values[state] = action_value
-                    self.state_policy[state] = action
-
+    def __call__(self, state: int or Coord) -> int:
         # Returns the best policy with probability self.p_obey
         return numpy.random.choice(
-            self.action_space, p=self.dist[self.state_policy[self.pos.to_state()]]
+            self.action_space, p=self.dist[self.state_policy[state]]
         )

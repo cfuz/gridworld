@@ -41,6 +41,9 @@ class World:
         Coord._SIZE = size
         self.n_states = size ** 2
 
+        self.cell_width = 7
+        self.gui_size = (self.cell_width + 1) * self.size + 6
+
         self.state = Coord(x_start, y_start)
 
         if x_end is None:
@@ -79,13 +82,11 @@ class World:
     def _inject(self, agent: Agent):
         self.agent = agent
 
-    def reward(self, elt: Coord or (int, int) or Cell) -> int:
+    def reward(self, elt: Coord or Cell) -> int:
         if isinstance(elt, Cell):
             return self._reward[elt]
         elif isinstance(elt, Coord):
             return self._reward[self.grid[elt.y][elt.x]]
-        elif isinstance(elt, tuple):
-            return self._reward[self.grid[elt[0]][elt[1]]]
         elif isinstance(elt, int):
             assert elt >= 0 and elt < self.n_states, "Index out of range.."
             state = Coord.from_state(elt)
@@ -93,11 +94,9 @@ class World:
         else:
             raise f"Unrecognized type for type {elt}.."
 
-    def cell(self, elt: Coord or (int, int) or int) -> Cell:
+    def cell(self, elt: Coord or int) -> Cell:
         if isinstance(elt, Coord):
             return self.grid[elt.y][elt.x]
-        elif isinstance(elt, tuple):
-            return self.grid[elt[0]][elt[1]]
         elif isinstance(elt, int):
             assert elt >= 0 and elt < self.n_states, "Index out of range.."
             state = Coord.from_state(elt)
@@ -105,10 +104,14 @@ class World:
         else:
             raise f"Unrecognized type for type {elt}.."
 
-    def process_action(self, action: Action) -> (float, bool):
-        self.agent.pos = self.agent.pos + action.value
-        ctype = self.grid[self.agent.pos.y][self.agent.pos.x]
-        return self._reward[ctype], ctype == Cell.Goal
+    def process_action(
+        self, state: int or Coord, action: Action
+    ) -> (Coord, float, bool):
+        if isinstance(state, int):
+            state = Coord.from_state(state)
+        next_state = state + action.value
+        ctype = self.cell(next_state)
+        return next_state, self._reward[ctype], ctype == Cell.Goal
 
     def gen_traps(
         self, x_start: int, y_start: int, x_end: int, y_end: int, trap_conf: dict
@@ -263,4 +266,5 @@ class World:
             if self.agent.is_logic == True:
                 grid_repr += action_line + "\n"
 
-        return grid_repr + sep
+        ep_line = f"{f'OPTIMIZED: {self.agent.is_optimized}  EPISODE: {self.agent.n_episodes:>3d}':>{self.gui_size}}\n"
+        return grid_repr + sep + ep_line

@@ -17,9 +17,104 @@ from agent import Agent
 
 
 class QAgent(Agent):
-    def __init__(self, action_space: numpy.array, cfg: dict = None):
-        super().__init__(action_space)
-        self.cfg = cfg
+    def __init__(
+        self,
+        action_space: numpy.array,
+        transitions: dict,
+        x: int,
+        y: int,
+        discount: float,
+        obey_factor: float,
+        learning_rate: float,
+    ):
+        assert (
+            discount >= 0.0 and discount <= 1.0
+        ), f"Discount factor outside definition intervall ({gamma}).."
+        assert (
+            obey_factor >= 0.0 and obey_factor <= 1.0
+        ), f"Best probability outside probability intervall ({p_best}).."
+        assert (
+            obey_factor >= 0.0 and obey_factor <= 1.0
+        ), f"Best probability outside probability intervall ({p_best}).."
 
-    def __call__(self, state: numpy.array):
-        return self.action_space.sample()
+        super().__init__(action_space, x, y, is_logic=True)
+
+        n_states = transitions["reward"].shape[0]
+
+        # Defining the impact of future decisions in policy iteration
+        self.discount = discount
+        self.learning_rate = learning_rate
+
+        self.q_values = numpy.zeros((n_states, self.n_actions), dtype=numpy.float32)
+        self.state_policy = numpy.zeros(n_states, dtype=numpy.int32)
+
+        # Defining randomness in decision
+        self.p_obey = obey_factor
+        self.p_disobey = (1.0 - self.p_obey) / (self.n_actions - 1)
+        self.dist = (
+            self.p_disobey * numpy.ones((self.n_actions, self.n_actions), dtype=float)
+        ) + (self.p_obey - self.p_disobey) * numpy.eye(
+            self.n_actions, self.n_actions, dtype=float
+        )
+
+        # Storing the 'rules'
+        self.reward_transitions = numpy.copy(transitions["reward"])
+        self.state_transitions = numpy.copy(transitions["next"])
+
+    def value(self, state: int or Coord = None) -> numpy.float32 or numpy.array:
+        if state is not None:
+            if isinstance(state, Coord):
+                return self.q_values[state.to_state(), :].max()
+            else:
+                return self.q_values[state, :].max()
+        else:
+            return self.q_values.max(axis=1)
+
+    def policy(self, state: int or Coord = None) -> numpy.int or numpy.array:
+        if state is not None:
+            if isinstance(state, Coord):
+                return self.state_policy[state.to_state()]
+            else:
+                return self.state_policy[state]
+        else:
+            return self.state_policy
+
+    def __call__(self, state: int or Coord) -> int:
+        def compute_action_value(
+            state: int, action: int, next_states: numpy.array, state_value: numpy.array
+        ) -> numpy.float32:
+            # Computes the expected reward and value given the probability distribution
+            expected_reward = (
+                self.reward_transitions[state, :] * self.dist[action, :]
+            ).sum()
+            expected_value = (state_value[next_states] * self.dist[action, :]).sum()
+
+            # Balancing the instantaneous expected reward with future value expectation
+            return expected_reward + self.discount * expected_value
+
+        if isinstance(state, Coord):
+            state = state.to_state()
+
+        current_state_value = numpy.copy(self.state_values)
+
+        # Evaluating current policy
+        for state, next_states in enumerate(self.state_transitions):
+            self.state_values[state] = compute_action_value(
+                state, self.state_policy[state], next_states, current_state_value
+            )
+
+        # Improving policy
+        for state, next_states in enumerate(self.state_transitions):
+            for action in self.action_space:
+                action_value = compute_action_value(
+                    state, action, next_states, current_state_value
+                )
+
+                if self.state_values[state] < action_value:
+                    self.state_values[state] = action_value
+                    self.state_policy[state] = action
+
+        # Returns the best policy with probability self.p_obey
+        return numpy.random.choice(
+            self.action_space, p=self.dist[self.state_policy[self.pos.to_state()]]
+        )
