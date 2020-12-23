@@ -40,6 +40,16 @@ class Action(enum.Enum):
         else:
             return Action.West
 
+    def to_idx(self) -> int:
+        if self == Action.North:
+            return 0
+        elif self == Action.East:
+            return 1
+        elif self == Action.South:
+            return 2
+        else:
+            return 3
+
     def __repr__(self):
         return str(self)
 

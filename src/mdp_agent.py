@@ -116,7 +116,7 @@ class MdpAgent(Agent):
         # Updating state
         super().update(action, reward, state, is_trap)
 
-        return (self.n_episodes, self.score, self.n_steps, self.is_optimized)
+        return (self.n_episodes, self.score, self.n_steps)
 
     def value(self, state: int or Coord = None) -> numpy.float32 or numpy.array:
         if state is not None:
@@ -137,6 +137,9 @@ class MdpAgent(Agent):
             return self.state_policy
 
     def __call__(self, state: int or Coord) -> int:
+        if isinstance(state, Coord):
+            state = state.to_state()
+
         # Returns the best policy with probability self.p_obey
         return numpy.random.choice(
             self.action_space, p=self.dist[self.state_policy[state]]

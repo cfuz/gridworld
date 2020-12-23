@@ -14,13 +14,15 @@ __email__ = [
 import numpy
 
 from agent import Agent
+from coord import Coord
+from action import Action
 
 
 class QAgent(Agent):
     def __init__(
         self,
         action_space: numpy.array,
-        transitions: dict,
+        n_states: int,
         x: int,
         y: int,
         discount: float,
@@ -39,8 +41,6 @@ class QAgent(Agent):
 
         super().__init__(action_space, x, y, is_logic=True)
 
-        n_states = transitions["reward"].shape[0]
-
         # Defining the impact of future decisions in policy iteration
         self.discount = discount
         self.learning_rate = learning_rate
@@ -57,9 +57,31 @@ class QAgent(Agent):
             self.n_actions, self.n_actions, dtype=float
         )
 
-        # Storing the 'rules'
-        self.reward_transitions = numpy.copy(transitions["reward"])
-        self.state_transitions = numpy.copy(transitions["next"])
+    def update(
+        self,
+        action: Action,
+        reward: float,
+        state: int or Coord,
+        is_trap: bool,
+        info: dict = None,
+    ) -> (int, float, int):
+        if isinstance(state, Coord):
+            state = state.to_state()
+
+        old_state = self.pos.to_state()
+        old_q_values = numpy.copy(self.q_values)
+        aidx = action.to_idx()
+
+        best_action = self.q_values[state, :].argmax()
+        target_value = reward + self.discount * self.q_values[state, best_action]
+        delta = target_value - old_q_values[old_state, aidx]
+        self.q_values[old_state, aidx] += self.learning_rate * delta
+        self.state_policy[old_state] = self.q_values[old_state, :].argmax()
+
+        # Updating state
+        super().update(action, reward, state, is_trap)
+
+        return (self.n_episodes, self.score, self.n_steps)
 
     def value(self, state: int or Coord = None) -> numpy.float32 or numpy.array:
         if state is not None:
@@ -80,41 +102,10 @@ class QAgent(Agent):
             return self.state_policy
 
     def __call__(self, state: int or Coord) -> int:
-        def compute_action_value(
-            state: int, action: int, next_states: numpy.array, state_value: numpy.array
-        ) -> numpy.float32:
-            # Computes the expected reward and value given the probability distribution
-            expected_reward = (
-                self.reward_transitions[state, :] * self.dist[action, :]
-            ).sum()
-            expected_value = (state_value[next_states] * self.dist[action, :]).sum()
-
-            # Balancing the instantaneous expected reward with future value expectation
-            return expected_reward + self.discount * expected_value
-
         if isinstance(state, Coord):
             state = state.to_state()
 
-        current_state_value = numpy.copy(self.state_values)
-
-        # Evaluating current policy
-        for state, next_states in enumerate(self.state_transitions):
-            self.state_values[state] = compute_action_value(
-                state, self.state_policy[state], next_states, current_state_value
-            )
-
-        # Improving policy
-        for state, next_states in enumerate(self.state_transitions):
-            for action in self.action_space:
-                action_value = compute_action_value(
-                    state, action, next_states, current_state_value
-                )
-
-                if self.state_values[state] < action_value:
-                    self.state_values[state] = action_value
-                    self.state_policy[state] = action
-
         # Returns the best policy with probability self.p_obey
         return numpy.random.choice(
-            self.action_space, p=self.dist[self.state_policy[self.pos.to_state()]]
+            self.action_space, p=self.dist[self.state_policy[state]]
         )

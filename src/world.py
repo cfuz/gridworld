@@ -266,5 +266,5 @@ class World:
             if self.agent.is_logic == True:
                 grid_repr += action_line + "\n"
 
-        ep_line = f"{f'OPTIMIZED: {self.agent.is_optimized}  EPISODE: {self.agent.n_episodes:>3d}':>{self.gui_size}}\n"
+        ep_line = f"{f'EPISODE: {self.agent.n_episodes:>3d}':>{self.gui_size}}\n"
         return grid_repr + sep + ep_line
