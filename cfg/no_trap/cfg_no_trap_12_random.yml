@@ -1,0 +1,15 @@
+max_steps: 1000
+seed: 7878
+
+world:
+  size: 12
+  start:
+    x: 0
+    y: 0
+  end:
+    x: 11
+    y: 11
+
+agent:
+  type: 'random'
+

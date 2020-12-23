@@ -1,5 +1,5 @@
 max_steps: 10000
-seed: 1337
+seed: 7878
 
 world:
   size: 12
@@ -47,7 +47,8 @@ world:
         y: 7
 
 agent:
-  type: 'mdp'
+  type: 'q'
   discount: 0.9
   obey_factor: 0.9
+  learning_rate: 0.5
 

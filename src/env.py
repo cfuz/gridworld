@@ -45,6 +45,10 @@ class GridWorld(gym.Env):
         # Initialize the RNG
         self.seed(seed=self.cfg["seed"])
 
+    def reset(self):
+        self.n_steps = 0
+        self.world.agent.reset()
+
     def inject(self, agent: Agent):
         self.world._inject(agent)
 
@@ -64,8 +68,8 @@ class GridWorld(gym.Env):
             action = self.actions.from_idx(action)
         self.n_steps += 1
         next_state, reward, done = self.world.process_action(state, action)
-        # if self.n_steps >= self.step_max:
-        #     done = True
+        if self.n_steps >= self.step_max:
+            done = True
         return next_state, reward, done, self.is_trap(next_state)
 
     def is_trap(self, state: int or Coord) -> bool:

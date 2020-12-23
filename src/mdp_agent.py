@@ -62,12 +62,7 @@ class MdpAgent(Agent):
         self.is_optimized = False
 
     def update(
-        self,
-        action: Action,
-        reward: float,
-        state: int or Coord,
-        is_trap: bool,
-        info: dict = None,
+        self, action: Action, reward: float, state: int or Coord, is_trap: bool,
     ) -> (int, float, int, bool):
         def compute_action_value(
             state: int, action: int, next_states: numpy.array, state_value: numpy.array

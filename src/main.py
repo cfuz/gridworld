@@ -74,13 +74,14 @@ def run_steps(
     n_run: int = 1,
 ) -> (str, Coord):
     n_ep = 0
+    is_sarsa = isinstance(agent, SarsaAgent)
 
     while n_ep < n_run:
         if reset:
-            agent.reset()
+            env.reset()
 
         state = agent.pos.copy()
-        for _ in range(n_steps):
+        for n_step in range(n_steps):
             prev_state = agent.pos.copy()
 
             action = agent(env.gen_obs())
@@ -89,14 +90,24 @@ def run_steps(
             if len(actions) > 80:
                 actions = actions[2 : len(actions) : 1]
 
-            state, reward, done, is_trap = env.step(prev_state, action)
+            next_state, reward, done, is_trap = env.step(prev_state, action)
 
-            n_episode, score, _step = agent.update(action, reward, state, is_trap)
+            if is_sarsa:
+                next_action = agent(next_state)
+                next_action = env.actions.from_idx(next_action)
+                n_episode, score, _step = agent.update(
+                    action, reward, next_state, next_action, is_trap
+                )
+            else:
+                n_episode, score, _step = agent.update(
+                    action, reward, next_state, is_trap
+                )
 
             if done:
                 break
 
         n_ep += 1
+        n_steps = env.step_max
         reset = True
 
     return (actions, prev_state, done)
@@ -136,15 +147,15 @@ if __name__ == "__main__":
             **cfg["world"]["start"],
             **cfg["agent"],
         )
-    # elif atype == "sarsa":
-    #     AGENT_CFG = f'SARSAAGT  DISC: {cfg["agent"]["discount"]}  OBEY: {cfg["agent"]["obey_factor"]}  LR: {cfg["agent"]["learning_rate"]}'
-    #     del cfg["agent"]["type"]
-    #     agent = SarsaAgent(
-    #         env.actions.to_indices(),
-    #         env.transitions,
-    #         **cfg["world"]["start"],
-    #         **cfg["agent"],
-    #     )
+    elif atype == "sarsa":
+        AGENT_CFG = f'SARSAAGT  DISC: {cfg["agent"]["discount"]}  OBEY: {cfg["agent"]["obey_factor"]}  LR: {cfg["agent"]["learning_rate"]}'
+        del cfg["agent"]["type"]
+        agent = SarsaAgent(
+            env.actions.to_indices(),
+            env.world.n_states,
+            **cfg["world"]["start"],
+            **cfg["agent"],
+        )
     elif atype == "q":
         AGENT_CFG = f'QAGT  DISC: {cfg["agent"]["discount"]}  OBEY: {cfg["agent"]["obey_factor"]}  LR: {cfg["agent"]["learning_rate"]}'
         del cfg["agent"]["type"]
@@ -162,20 +173,18 @@ if __name__ == "__main__":
     draw_header()
     env.render()
 
-    state = env.gen_obs()
-
     stop = False
     done = False
     n_run = 1
     n_steps = 1
     actions = ""
 
-    re_fire_mode = re.compile(f"^\s*(fire)(?:\s+(\d*))?.*$", re.IGNORECASE)
+    re_fire_mode = re.compile(f"^\s*(fire)(?:\s+(\d*))?\s*.*$", re.IGNORECASE)
 
     while not stop:
         while True:
             running_mode = input(
-                "🚀 #Steps to run? [\033[1;35mint(default: 1)\033[0m|fire int(default: 1)|{quit|q] "
+                "🚀 #Steps to run? [\033[1;35mint(default: 1)\033[0m|fire int(default: 1)|quit] "
             ).strip()
 
             if running_mode in ["quit", "q"]:
@@ -187,7 +196,7 @@ if __name__ == "__main__":
                     n_run = 1
                 else:
                     n_run = int(n_run)
-                n_steps = env.step_max
+                n_steps = env.step_max - env.n_steps
                 break
             else:
                 try:

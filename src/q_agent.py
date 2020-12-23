@@ -36,7 +36,7 @@ class QAgent(Agent):
             obey_factor >= 0.0 and obey_factor <= 1.0
         ), f"Best probability outside probability intervall ({p_best}).."
         assert (
-            obey_factor >= 0.0 and obey_factor <= 1.0
+            learning_rate >= 0.0
         ), f"Best probability outside probability intervall ({p_best}).."
 
         super().__init__(action_space, x, y, is_logic=True)
@@ -58,28 +58,22 @@ class QAgent(Agent):
         )
 
     def update(
-        self,
-        action: Action,
-        reward: float,
-        state: int or Coord,
-        is_trap: bool,
-        info: dict = None,
+        self, action: Action, reward: float, next_state: int or Coord, is_trap: bool,
     ) -> (int, float, int):
-        if isinstance(state, Coord):
-            state = state.to_state()
+        if isinstance(next_state, Coord):
+            next_state = next_state.to_state()
 
-        old_state = self.pos.to_state()
-        old_q_values = numpy.copy(self.q_values)
+        state = self.pos.to_state()
         aidx = action.to_idx()
 
-        best_action = self.q_values[state, :].argmax()
-        target_value = reward + self.discount * self.q_values[state, best_action]
-        delta = target_value - old_q_values[old_state, aidx]
-        self.q_values[old_state, aidx] += self.learning_rate * delta
-        self.state_policy[old_state] = self.q_values[old_state, :].argmax()
+        best_action = self.q_values[next_state, :].argmax()
+        target_value = reward + self.discount * self.q_values[next_state, best_action]
+        delta = target_value - self.q_values[state, aidx]
+        self.q_values[state, aidx] += self.learning_rate * delta
+        self.state_policy[state] = self.q_values[state, :].argmax()
 
-        # Updating state
-        super().update(action, reward, state, is_trap)
+        # Updating agent's state
+        super().update(action, reward, next_state, is_trap)
 
         return (self.n_episodes, self.score, self.n_steps)
 

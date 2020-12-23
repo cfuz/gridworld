@@ -1,5 +1,5 @@
 max_steps: 1000
-seed: 1337
+seed: 7878
 
 world:
   size: 12

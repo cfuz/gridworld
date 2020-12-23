@@ -1,0 +1,23 @@
+max_steps: 10000
+seed: 7878
+
+world:
+  size: 12
+  start:
+    x: 0
+    y: 0
+  end:
+    x: 11
+    y: 11
+  traps:
+    type: 'random'
+    dist:
+      empty: 0.8
+      trap: 0.2
+
+agent:
+  type: 'q'
+  discount: 0.9
+  obey_factor: 0.9
+  learning_rate: 0.5
+
