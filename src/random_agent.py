@@ -14,7 +14,7 @@ __email__ = [
 import numpy
 
 from agent import Agent
-
+from action import Action
 
 class RandomAgent(Agent):
     def __init__(
