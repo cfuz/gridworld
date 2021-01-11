@@ -48,7 +48,7 @@ world:
 
 agent:
   type: 'q'
-  discount: 0.9
+  discount: 1.0
   obey_factor: 0.9
   learning_rate: 0.5
 

@@ -1,0 +1,43 @@
+name: grid
+channels:
+  - defaults
+dependencies:
+  - _libgcc_mutex=0.1=main
+  - appdirs=1.4.4=py_0
+  - attrs=20.3.0=pyhd3eb1b0_0
+  - black=19.10b0=py_0
+  - ca-certificates=2020.12.8=h06a4308_0
+  - certifi=2020.12.5=py38h06a4308_0
+  - click=7.1.2=py_0
+  - ld_impl_linux-64=2.33.1=h53a641e_7
+  - libedit=3.1.20191231=h14c3975_1
+  - libffi=3.3=he6710b0_2
+  - libgcc-ng=9.1.0=hdf63c60_0
+  - libstdcxx-ng=9.1.0=hdf63c60_0
+  - mypy_extensions=0.4.3=py38_0
+  - ncurses=6.2=he6710b0_1
+  - openssl=1.1.1i=h27cfd23_0
+  - pathspec=0.7.0=py_0
+  - pip=20.3.3=py38h06a4308_0
+  - python=3.8.5=h7579374_1
+  - readline=8.0=h7b6447c_0
+  - regex=2020.11.13=py38h27cfd23_0
+  - setuptools=51.0.0=py38h06a4308_2
+  - sqlite=3.33.0=h62c20be_0
+  - tk=8.6.10=hbc83047_0
+  - toml=0.10.1=py_0
+  - typed-ast=1.4.1=py38h7b6447c_0
+  - typing_extensions=3.7.4.3=py_0
+  - wheel=0.36.2=pyhd3eb1b0_0
+  - xz=5.2.5=h7b6447c_0
+  - zlib=1.2.11=h7b6447c_3
+  - pip:
+    - cloudpickle==1.6.0
+    - future==0.18.2
+    - gym==0.18.0
+    - numpy==1.19.5
+    - pillow==7.2.0
+    - pyglet==1.5.0
+    - pyyaml==5.3.1
+    - scipy==1.6.0
+prefix: /home/cfuz/.anaconda3/envs/grid
