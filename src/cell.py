@@ -3,7 +3,7 @@
 
 __author__ = ["Jarod Duret", "Jonathan Heno"]
 __credits__ = ["Jarod Duret", "Jonathan Heno"]
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 __maintainer__ = ["Jarod Duret", "Jonathan Heno"]
 __email__ = [
     "jarod.duret@alumni.univ-avignon.fr",
@@ -15,6 +15,11 @@ import enum
 
 
 class Cell(enum.Enum):
+    """
+    `Cell` is aimed at defining the different types of cell our `Agent` could 
+    land on, in the Gridworld paradigm.
+    """
+
     Empty = 0
     Start = 1
     Trap = 2

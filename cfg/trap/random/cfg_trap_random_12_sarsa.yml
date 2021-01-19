@@ -12,12 +12,12 @@ world:
   traps:
     type: 'random'
     dist:
-      empty: 0.8
-      trap: 0.2
+      empty: 0.9
+      trap: 0.1
 
 agent:
   type: 'sarsa'
-  discount: 0.9
+  discount: 1.0
   obey_factor: 0.9
   learning_rate: 0.5
 

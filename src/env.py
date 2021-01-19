@@ -3,7 +3,7 @@
 
 __author__ = ["Jarod Duret", "Jonathan Heno"]
 __credits__ = ["Jarod Duret", "Jonathan Heno"]
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 __maintainer__ = ["Jarod Duret", "Jonathan Heno"]
 __email__ = [
     "jarod.duret@alumni.univ-avignon.fr",
@@ -26,6 +26,29 @@ from action import Action
 
 
 class GridWorld(gym.Env):
+    """
+    This class tries to mimic the architecture of OpenAI's `gym` library.
+    It contains the logic of our `GridWorld` problem.
+    `GridWorld` acts here as an orchestrator between an `Agent` an its 
+    environment.
+
+    Attributes
+    ----------
+    actions (Action):
+        The action set
+    n_actions (int):
+        The action set's cardinality
+    n_steps (int):
+        Number of steps run of the current epoch
+    n_step_max (int):
+        Maximum number of steps to run in a given session
+    world (World):
+        The scene where the scenario takes place.
+    transitions (dict(str, numpy.array)):
+        Map of all the available rewards and successors of each state defining
+        the environment
+    """
+
     def __init__(self, cfg):
         self.cfg = cfg
 
@@ -46,24 +69,70 @@ class GridWorld(gym.Env):
         self.seed(seed=self.cfg["seed"])
 
     def reset(self):
+        """
+        Resets the state of the environment to its initial state.
+        """
         self.n_steps = 0
         self.world.agent.reset()
 
     def inject(self, agent: Agent):
+        """
+        Spawns an `Agent` into the GridWorld system.
+
+        Parameter
+        ---------
+        agent (Agent):
+            The agent to be injected in the grid
+        """
         self.world._inject(agent)
 
     def seed(self, seed=7878):
+        """
+        Defines a seed for our simulation so as to be as reproducible as 
+        possible.
+
+        Parameter
+        ---------
+        seed (int):
+            The seed of the random process generator for our experiment
+        
+        Returns
+        -------
+        (list[int]):
+            Our randomly generated sequence
+        """
         # Seed the random number generator
         self.np_random, _ = seeding.np_random(seed)
         return [seed]
 
     def render(self, close=False):
-        # Render the environment to the screen
+        """
+        Render the environment in the terminal.
+        """
         print(self.world, end="")
 
     def step(
         self, state: int or Coord, action: int or Action
     ) -> (Coord, float, bool, bool):
+        """
+        Computes the effect of an `action` in a given `state`.
+
+        Parameters
+        ----------
+        state (int or Coord):
+            The state at which the action should be considered
+        action (Action):
+            The action taken
+
+        Returns
+        -------
+        (Coord, float, bool):
+            A tuple giving:
+                1. The landing state
+                2. The reward associated with the reached state
+                3. A flag tagging if the simulation is done (Goal reached or maximum number of steps exceeded)
+                4. If the landing state is a trap
+        """
         if isinstance(action, int) or isinstance(action, numpy.int32):
             action = self.actions.from_idx(action)
         self.n_steps += 1
@@ -73,6 +142,19 @@ class GridWorld(gym.Env):
         return next_state, reward, done, self.is_trap(next_state)
 
     def is_trap(self, state: int or Coord) -> bool:
+        """
+        Checks if a `state` is a trap cell.
+
+        Parameter
+        ---------
+        state (int or Coord):
+            The state to check
+
+        Returns
+        -------
+        (bool):
+            True if the state is a trap, False otherwise
+        """
         if isinstance(state, int):
             state = Coord.from_state(state)
         return self.world.cell(state) == Cell.Trap
@@ -101,6 +183,10 @@ class GridWorld(gym.Env):
         )
 
     def _gen_dist(self):
+        """
+        Maps the rewards and landing state from each `Cell` composing our `World`.
+        """
+
         def next(state: int, action: Action) -> (int, float, bool):
             if self.world.cell(state) == Cell.Goal:
                 return (state, 0.0, True)

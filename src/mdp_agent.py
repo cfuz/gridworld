@@ -3,7 +3,7 @@
 
 __author__ = ["Jarod Duret", "Jonathan Heno"]
 __credits__ = ["Jarod Duret", "Jonathan Heno"]
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 __maintainer__ = ["Jarod Duret", "Jonathan Heno"]
 __email__ = [
     "jarod.duret@alumni.univ-avignon.fr",
@@ -20,6 +20,38 @@ from action import Action
 
 # ref: https://www.youtube.com/watch?v=9g32v7bK3Co
 class MdpAgent(Agent):
+    """
+    Baseline model of our abstract `Agent` class.
+    This concrete instance is aimed at processing and propagating the 
+    environments reward system throught a markod decision process.
+
+    Attributes
+    ----------
+    discount (float):
+        Discount factor to apply to our model
+    p_obey (float):
+        Probability of taking the optimal decision
+    p_disobey (float):
+        Probability of taking a suboptimal solution with respect to current 
+        policy
+    dist (numpy.array):
+        Matrix aiming at weighting the actions and their values at a given 
+        state with respect to current optimal policy
+    state_values (numpy.array):
+        State values mapped on each state of the environment
+    state_policy (numpy.array):
+        Policy taken given the environment
+    reward_transitions (numpy.array):
+        Map of all rewards reachable for each state
+    state_transitions (numpy.array):
+        Map of all state transitions for each state
+    epsilon (float, 1.0e-5):
+        Threshold bellow which the state values difference between two steps is
+        considered as too minor to improve the overall solution
+    is_optimized (bool, False):
+        Set to True once the state values variation is bellow epsilon threshold
+    """
+
     def __init__(
         self,
         action_space: numpy.array,

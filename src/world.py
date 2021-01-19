@@ -3,7 +3,7 @@
 
 __author__ = ["Jarod Duret", "Jonathan Heno"]
 __credits__ = ["Jarod Duret", "Jonathan Heno"]
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 __maintainer__ = ["Jarod Duret", "Jonathan Heno"]
 __email__ = [
     "jarod.duret@alumni.univ-avignon.fr",
@@ -21,6 +21,25 @@ from action import Action
 
 
 class World:
+    """
+    `World` stores all the information of a squared Gridworld.
+
+    Attributes
+    ----------
+    size (int):
+        Number of rows to be considered
+    n_states (int):
+        Total number of states (is equal to size²)
+    _reward (int):
+        The set of reward attributed to each type of Cell
+    grid (list[list[Cell]]):
+        The concrete Gridworld
+    flat_reward_map (list[int]):
+        The map of reward attributed on each Cell of the grid
+    agent (Agent):
+        The decision maker included in the World
+    """
+
     def __init__(
         self,
         size: int,
@@ -83,6 +102,18 @@ class World:
         self.agent = agent
 
     def reward(self, elt: Coord or Cell) -> int:
+        """
+        Get the reward of a `Cell`.
+
+        Parameter
+        ---------
+        elt (Coord or Cell):
+            The state from which we should extract the reward
+
+        Returns:
+        (int):
+            The value of the reward associated with state elt
+        """
         if isinstance(elt, Cell):
             return self._reward[elt]
         elif isinstance(elt, Coord):
@@ -95,6 +126,19 @@ class World:
             raise f"Unrecognized type for type {elt}.."
 
     def cell(self, elt: Coord or int) -> Cell:
+        """
+        Return the `Cell` associated with a given state.
+
+        Parameter
+        ---------
+        elt (Coord or int):
+            The cell's state
+        
+        Returns
+        -------
+        (Cell):
+            The corresponding cell given elt state
+        """
         if isinstance(elt, Coord):
             return self.grid[elt.y][elt.x]
         elif isinstance(elt, int):
@@ -107,6 +151,24 @@ class World:
     def process_action(
         self, state: int or Coord, action: Action
     ) -> (Coord, float, bool):
+        """
+        Computes the effect of an `action` in a given `state`.
+
+        Parameters
+        ----------
+        state (int or Coord):
+            The state at which the action should be considered
+        action (Action):
+            The action taken
+
+        Returns
+        -------
+        (Coord, float, bool):
+            A triplet giving
+                1. The landing state
+                2. The reward associated with the reached state
+                3. A flag tagging if the landing state is the Goal
+        """
         if isinstance(state, int):
             state = Coord.from_state(state)
         next_state = state + action.value

@@ -1,6 +1,7 @@
 __pycache__
-.vs_code
+.vscode
 notes/*.aux
 notes/*.out
 notes/*.log
 notes/*.synctex.gz
+*.zip

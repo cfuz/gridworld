@@ -11,5 +11,8 @@ world:
     y: 11
 
 agent:
-  type: 'random'
+  type: 'q'
+  discount: 1.0
+  obey_factor: 0.9
+  learning_rate: 0.5
 

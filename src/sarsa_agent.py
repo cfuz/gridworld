@@ -3,7 +3,7 @@
 
 __author__ = ["Jarod Duret", "Jonathan Heno"]
 __credits__ = ["Jarod Duret", "Jonathan Heno"]
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 __maintainer__ = ["Jarod Duret", "Jonathan Heno"]
 __email__ = [
     "jarod.duret@alumni.univ-avignon.fr",
@@ -19,6 +19,36 @@ from action import Action
 
 
 class SarsaAgent(Agent):
+    """
+    One of the TDP model of our abstract `Agent` class.
+    This concrete instance is aimed at processing the environment's rewards
+    system throught a variant of the Q-learning approach: the SARSA (for State 
+    Action Reward State Action) algorithm.
+    The objective of this model will be to improve its policy by weighting its 
+    policy throught its q-values, evaluated on `q[state, action]`, 
+    `q[next_state, next_action]` and on the direct reward obtained when landing 
+    on the `next_state`. 
+
+    Attributes
+    ----------
+    discount (float):
+        Discount factor to apply to our model
+    learning_rate (float):
+        Pace at which the model should learn from its errors
+    p_obey (float):
+        Probability of taking the optimal decision
+    p_disobey (float):
+        Probability of taking a suboptimal solution with respect to current 
+        policy
+    dist (numpy.array):
+        Matrix aiming at weighting the actions and their values at a given 
+        state with respect to current optimal policy
+    q_values (numpy.array):
+        Matrix mapping for each row, the q-value associated with each action from a given state.
+    state_policy (numpy.array):
+        Policy taken given the environment
+    """
+
     def __init__(
         self,
         action_space: numpy.array,
