@@ -2,7 +2,7 @@
 
 \RequirePackage{hyperref}
 \RequirePackage{fullpage}
-\RequirePackage{enumitem}
+\RequirePackage{enumerate}
 \RequirePackage{graphicx}
 \RequirePackage{glossaries}
 \numberwithin{equation}{section}
@@ -18,25 +18,25 @@
 \RequirePackage{bm}
 \RequirePackage{bbm}
 
-\renewcommand{\algorithmicrequire}{\textsc{Entrée :}}
-\renewcommand{\algorithmicensure}{\textsc{Sortie :}}
-\renewcommand{\algorithmicif}{\textsc{Si}}
-\renewcommand{\algorithmicelse}{\textsc{Sinon}}
-\renewcommand{\algorithmicelsif}{\textsc{Sinon si}}
-\renewcommand{\algorithmicrepeat}{\textsc{Faire}}
-\renewcommand{\algorithmicuntil}{\textsc{Tant que}}
-\renewcommand{\algorithmicdo}{\textsc{Faire}}
-\renewcommand{\algorithmicthen}{\textsc{Alors}}
-\renewcommand{\algorithmicwhile}{\textsc{Tant que}}
-\renewcommand{\algorithmicfor}{\textsc{Pour}}
-\renewcommand{\algorithmicend}{\textsc{Fin}}
-\renewcommand{\algorithmicand}{\textsc{Et}}
-\renewcommand{\algorithmicor}{\textsc{Ou}}
-\renewcommand{\algorithmicxor}{\textsc{Exclusif ou}}
-\renewcommand{\algorithmicnot}{\textsc{Non}}
-\renewcommand{\algorithmictrue}{\textsc{Vrai}}
-\renewcommand{\algorithmicfalse}{\textsc{Faux}}
-\renewcommand{\algorithmicreturn}{\textsc{Retourner}}
+\renewcommand{\algorithmicrequire}{\textsc{Input:}}
+\renewcommand{\algorithmicensure}{\textsc{Output:}}
+\renewcommand{\algorithmicif}{\textsc{If}}
+\renewcommand{\algorithmicelse}{\textsc{Else}}
+\renewcommand{\algorithmicelsif}{\textsc{Else if}}
+\renewcommand{\algorithmicrepeat}{\textsc{Do}}
+\renewcommand{\algorithmicuntil}{\textsc{While}}
+\renewcommand{\algorithmicdo}{\textsc{do}}
+\renewcommand{\algorithmicthen}{\textsc{then}}
+\renewcommand{\algorithmicwhile}{\textsc{While}}
+\renewcommand{\algorithmicfor}{\textsc{For}}
+\renewcommand{\algorithmicend}{\textsc{End}}
+\renewcommand{\algorithmicand}{\textsc{and}}
+\renewcommand{\algorithmicor}{\textsc{or}}
+\renewcommand{\algorithmicxor}{\textsc{xor}}
+\renewcommand{\algorithmicnot}{\textsc{not}}
+\renewcommand{\algorithmictrue}{\textsc{True}}
+\renewcommand{\algorithmicfalse}{\textsc{False}}
+\renewcommand{\algorithmicreturn}{\textsc{Return}}
 \renewcommand{\algorithmiccomment}[1]{\texttt{\#} #1}
-\renewcommand{\algorithmicto}{à}
+\renewcommand{\algorithmicto}{\textsc{to}}
 
